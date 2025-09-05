@@ -9,6 +9,8 @@ import { AppService } from './app.service';
 import { ConfigsModule } from './configs/configs.module';
 import { ConfigsService } from './configs/configs.service';
 
+import { InboundsModule } from './inbounds/inbounds.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -29,6 +31,8 @@ import { ConfigsService } from './configs/configs.service';
       }),
       inject: [ConfigsService],
     }),
+
+    InboundsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
