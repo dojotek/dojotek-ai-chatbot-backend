@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SampleOutbondService } from './services/sample-outbond.service';
 import { SampleOutbondController } from './controllers/sample-outbond.controller';
+import { CachesModule } from 'src/caches/caches.module';
 import { BullModule } from '@nestjs/bullmq';
 
 @Module({
@@ -8,8 +9,9 @@ import { BullModule } from '@nestjs/bullmq';
   providers: [SampleOutbondService],
   exports: [SampleOutbondService],
   imports: [
+    CachesModule,
     BullModule.registerQueue({
-      name: 'OUTBOUNDS/SAMPLE_OUTBOUND/v2025.09.05',
+      name: 'OUTBOUNDS/SAMPLE/v2025.09.05',
     }),
   ],
 })

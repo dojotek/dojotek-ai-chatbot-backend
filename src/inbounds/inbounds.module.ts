@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SampleInboundService } from './services/sample-inbound.service';
 import { SampleInboundController } from './controllers/sample-inbound.controller';
+import { CachesModule } from 'src/caches/caches.module';
 import { BullModule } from '@nestjs/bullmq';
 
 @Module({
@@ -8,8 +9,9 @@ import { BullModule } from '@nestjs/bullmq';
   providers: [SampleInboundService],
   exports: [SampleInboundService],
   imports: [
+    CachesModule,
     BullModule.registerQueue({
-      name: 'INBOUNDS/SAMPLE_INBOUND/v2025.09.05',
+      name: 'INBOUNDS/SAMPLE/v2025.09.05',
     }),
   ],
 })

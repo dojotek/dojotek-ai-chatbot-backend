@@ -1,11 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getQueueToken } from '@nestjs/bullmq';
-import { SampleOutbondService } from './sample-outbond.service';
 import { Queue, Job } from 'bullmq';
+import { CachesService } from '../../caches/caches.service';
+import { CACHE_CLIENT } from '../../caches/constants';
+import { SampleOutbondService } from './sample-outbond.service';
 
 describe('SampleOutbondService', () => {
   let service: SampleOutbondService;
   let mockQueue: jest.Mocked<Queue>;
+  let mockCachesService: jest.Mocked<CachesService>;
 
   // Helper function to create a mock job
   const createMockJob = (): Job =>
@@ -49,6 +52,18 @@ describe('SampleOutbondService', () => {
     }) as unknown as Job;
 
   beforeEach(async () => {
+    // Create a mock caches service
+    mockCachesService = {
+      set: jest.fn(),
+      get: jest.fn(),
+      del: jest.fn(),
+      exists: jest.fn(),
+      expire: jest.fn(),
+      ttl: jest.fn(),
+      keys: jest.fn(),
+      flushAll: jest.fn(),
+    } as unknown as jest.Mocked<CachesService>;
+
     // Create a mock queue with all necessary methods
     mockQueue = {
       add: jest.fn(),
@@ -97,7 +112,15 @@ describe('SampleOutbondService', () => {
       providers: [
         SampleOutbondService,
         {
-          provide: getQueueToken('OUTBOUNDS/SAMPLE_OUTBOUND/v2025.09.05'),
+          provide: CachesService,
+          useValue: mockCachesService,
+        },
+        {
+          provide: CACHE_CLIENT,
+          useValue: {}, // Mock Redis client
+        },
+        {
+          provide: getQueueToken('OUTBOUNDS/SAMPLE/v2025.09.05'),
           useValue: mockQueue,
         },
       ],
@@ -121,41 +144,65 @@ describe('SampleOutbondService', () => {
   });
 
   describe('submit', () => {
-    it('should add a job to the queue with correct parameters', async () => {
+    it('should set cache and add a job to the queue with correct parameters', async () => {
       // Arrange
       const expectedJobData = {
         message: 'hello',
       };
       const expectedJobName = 'submit';
+      const expectedCacheKey = 'OUTBOUNDS/SAMPLE/v2025.09.05';
+      const expectedCacheValue = 'hello';
+      const expectedCacheTtl = 60;
       const mockJob = createMockJob();
       mockQueue.add.mockResolvedValue(mockJob);
+      mockCachesService.set.mockResolvedValue('OK');
       const addSpy = jest.spyOn(mockQueue, 'add');
+      const setCacheSpy = jest.spyOn(mockCachesService, 'set');
 
       // Act
       const result = await service.submit();
 
       // Assert
+      expect(setCacheSpy).toHaveBeenCalledTimes(1);
+      expect(setCacheSpy).toHaveBeenCalledWith(
+        expectedCacheKey,
+        expectedCacheValue,
+        expectedCacheTtl,
+      );
       expect(addSpy).toHaveBeenCalledTimes(1);
       expect(addSpy).toHaveBeenCalledWith(expectedJobName, expectedJobData);
       expect(result).toBe('OK');
     });
 
-    it('should return "OK" after successfully adding job to queue', async () => {
+    it('should return "OK" after successfully setting cache and adding job to queue', async () => {
       // Arrange
       const mockJob = createMockJob();
       mockQueue.add.mockResolvedValue(mockJob);
+      mockCachesService.set.mockResolvedValue('OK');
 
       // Act
       const result = await service.submit();
 
       // Assert
       expect(result).toBe('OK');
+    });
+
+    it('should handle cache.set errors and propagate them', async () => {
+      // Arrange
+      const error = new Error('Cache set failed');
+      mockCachesService.set.mockRejectedValue(error);
+      const setCacheSpy = jest.spyOn(mockCachesService, 'set');
+
+      // Act & Assert
+      await expect(service.submit()).rejects.toThrow('Cache set failed');
+      expect(setCacheSpy).toHaveBeenCalledTimes(1);
     });
 
     it('should handle queue.add errors and propagate them', async () => {
       // Arrange
       const error = new Error('Queue add failed');
       mockQueue.add.mockRejectedValue(error);
+      mockCachesService.set.mockResolvedValue('OK');
       const addSpy = jest.spyOn(mockQueue, 'add');
 
       // Act & Assert
@@ -167,6 +214,7 @@ describe('SampleOutbondService', () => {
       // Arrange
       const mockJob = createMockJob();
       mockQueue.add.mockResolvedValue(mockJob);
+      mockCachesService.set.mockResolvedValue('OK');
       const addSpy = jest.spyOn(mockQueue, 'add');
 
       // Act
@@ -185,6 +233,7 @@ describe('SampleOutbondService', () => {
       // Arrange
       const mockJob = createMockJob();
       mockQueue.add.mockResolvedValue(mockJob);
+      mockCachesService.set.mockResolvedValue('OK');
       const addSpy = jest.spyOn(mockQueue, 'add');
 
       // Act

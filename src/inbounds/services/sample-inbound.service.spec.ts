@@ -1,14 +1,27 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Queue, Job } from 'bullmq';
+import { CachesService } from '../../caches/caches.service';
+import { CACHE_CLIENT } from '../../caches/constants';
 import { SampleInboundService } from './sample-inbound.service';
 
 describe('SampleInboundService', () => {
   let service: SampleInboundService;
   let mockQueue: jest.Mocked<Queue>;
+  let mockCachesService: jest.Mocked<CachesService>;
   let addSpy: jest.SpyInstance;
+  let setSpy: jest.SpyInstance;
 
   beforeEach(async () => {
+    // Create a mock caches service
+    mockCachesService = {
+      get: jest.fn(),
+      set: jest.fn(),
+      del: jest.fn(),
+      getClient: jest.fn(),
+      onModuleDestroy: jest.fn(),
+    } as unknown as jest.Mocked<CachesService>;
+
     // Create a mock queue with all necessary methods
     mockQueue = {
       add: jest.fn(),
@@ -55,7 +68,15 @@ describe('SampleInboundService', () => {
       providers: [
         SampleInboundService,
         {
-          provide: getQueueToken('INBOUNDS/SAMPLE_INBOUND/v2025.09.05'),
+          provide: CachesService,
+          useValue: mockCachesService,
+        },
+        {
+          provide: CACHE_CLIENT,
+          useValue: {}, // Mock Redis client
+        },
+        {
+          provide: getQueueToken('INBOUNDS/SAMPLE/v2025.09.05'),
           useValue: mockQueue,
         },
       ],
@@ -63,6 +84,7 @@ describe('SampleInboundService', () => {
 
     service = module.get<SampleInboundService>(SampleInboundService);
     addSpy = jest.spyOn(mockQueue, 'add');
+    setSpy = jest.spyOn(mockCachesService, 'set');
   });
 
   afterEach(() => {
@@ -80,12 +102,18 @@ describe('SampleInboundService', () => {
         message: 'hello',
       };
       const expectedJobName = 'submit';
+      mockCachesService.set.mockResolvedValue('OK');
       addSpy.mockResolvedValue({} as unknown as Job);
 
       // Act
       const result = await service.submit();
 
       // Assert
+      expect(setSpy).toHaveBeenCalledWith(
+        'INBOUNDS/SAMPLE/v2025.09.05',
+        'hello',
+        60,
+      );
       expect(addSpy).toHaveBeenCalledTimes(1);
       expect(addSpy).toHaveBeenCalledWith(expectedJobName, expectedJobData);
       expect(result).toBe('OK');
@@ -93,6 +121,7 @@ describe('SampleInboundService', () => {
 
     it('should handle queue add success', async () => {
       // Arrange
+      mockCachesService.set.mockResolvedValue('OK');
       addSpy.mockResolvedValue({
         id: '123',
         name: 'submit',
@@ -102,6 +131,11 @@ describe('SampleInboundService', () => {
       const result = await service.submit();
 
       // Assert
+      expect(setSpy).toHaveBeenCalledWith(
+        'INBOUNDS/SAMPLE/v2025.09.05',
+        'hello',
+        60,
+      );
       expect(result).toBe('OK');
       expect(addSpy).toHaveBeenCalledWith('submit', {
         message: 'hello',
@@ -110,11 +144,17 @@ describe('SampleInboundService', () => {
 
     it('should propagate queue add errors', async () => {
       // Arrange
+      mockCachesService.set.mockResolvedValue('OK');
       const error = new Error('Queue connection failed');
       addSpy.mockRejectedValue(error);
 
       // Act & Assert
       await expect(service.submit()).rejects.toThrow('Queue connection failed');
+      expect(setSpy).toHaveBeenCalledWith(
+        'INBOUNDS/SAMPLE/v2025.09.05',
+        'hello',
+        60,
+      );
       expect(addSpy).toHaveBeenCalledWith('submit', {
         message: 'hello',
       });
@@ -122,21 +162,33 @@ describe('SampleInboundService', () => {
 
     it('should handle queue timeout errors', async () => {
       // Arrange
+      mockCachesService.set.mockResolvedValue('OK');
       const timeoutError = new Error('Queue timeout');
       addSpy.mockRejectedValue(timeoutError);
 
       // Act & Assert
       await expect(service.submit()).rejects.toThrow('Queue timeout');
+      expect(setSpy).toHaveBeenCalledWith(
+        'INBOUNDS/SAMPLE/v2025.09.05',
+        'hello',
+        60,
+      );
     });
 
     it('should handle queue add with undefined job data', async () => {
       // Arrange
+      mockCachesService.set.mockResolvedValue('OK');
       addSpy.mockResolvedValue({} as unknown as Job);
 
       // Act
       const result = await service.submit();
 
       // Assert
+      expect(setSpy).toHaveBeenCalledWith(
+        'INBOUNDS/SAMPLE/v2025.09.05',
+        'hello',
+        60,
+      );
       expect(addSpy).toHaveBeenCalledWith('submit', {
         message: 'hello',
       });
@@ -145,17 +197,24 @@ describe('SampleInboundService', () => {
 
     it('should call queue add with correct job name', async () => {
       // Arrange
+      mockCachesService.set.mockResolvedValue('OK');
       addSpy.mockResolvedValue({} as unknown as Job);
 
       // Act
       await service.submit();
 
       // Assert
+      expect(setSpy).toHaveBeenCalledWith(
+        'INBOUNDS/SAMPLE/v2025.09.05',
+        'hello',
+        60,
+      );
       expect(addSpy).toHaveBeenCalledWith('submit', expect.any(Object));
     });
 
     it('should return OK string regardless of job result', async () => {
       // Arrange
+      mockCachesService.set.mockResolvedValue('OK');
       addSpy.mockResolvedValue({
         id: '456',
         status: 'completed',
@@ -165,7 +224,43 @@ describe('SampleInboundService', () => {
       const result = await service.submit();
 
       // Assert
+      expect(setSpy).toHaveBeenCalledWith(
+        'INBOUNDS/SAMPLE/v2025.09.05',
+        'hello',
+        60,
+      );
       expect(result).toBe('OK');
+    });
+
+    it('should call caches service with correct parameters', async () => {
+      // Arrange
+      mockCachesService.set.mockResolvedValue('OK');
+      addSpy.mockResolvedValue({} as unknown as Job);
+
+      // Act
+      await service.submit();
+
+      // Assert
+      expect(setSpy).toHaveBeenCalledWith(
+        'INBOUNDS/SAMPLE/v2025.09.05',
+        'hello',
+        60,
+      );
+    });
+
+    it('should propagate caches service errors', async () => {
+      // Arrange
+      const cacheError = new Error('Cache connection failed');
+      mockCachesService.set.mockRejectedValue(cacheError);
+
+      // Act & Assert
+      await expect(service.submit()).rejects.toThrow('Cache connection failed');
+      expect(setSpy).toHaveBeenCalledWith(
+        'INBOUNDS/SAMPLE/v2025.09.05',
+        'hello',
+        60,
+      );
+      expect(addSpy).not.toHaveBeenCalled();
     });
   });
 });
