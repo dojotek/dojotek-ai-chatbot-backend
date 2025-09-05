@@ -10,6 +10,7 @@ import { ConfigsModule } from './configs/configs.module';
 import { ConfigsService } from './configs/configs.service';
 
 import { InboundsModule } from './inbounds/inbounds.module';
+import { OutboundsModule } from './outbounds/outbounds.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { InboundsModule } from './inbounds/inbounds.module';
     }),
 
     InboundsModule,
+    OutboundsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
