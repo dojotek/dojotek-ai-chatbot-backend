@@ -22,7 +22,15 @@ export class ConfigsService {
   }
 
   get messageQueueValkeyPort(): number {
-    return this.configService.get<number>('MESSAGE_QUEUE_VALKEY_PORT', 6379);
+    return this.configService.get<number>('MESSAGE_QUEUE_VALKEY_PORT', 6380);
+  }
+
+  get cacheValkeyHost(): string {
+    return this.configService.getOrThrow<string>('CACHE_VALKEY_HOST');
+  }
+
+  get cacheValkeyPort(): number {
+    return this.configService.get<number>('CACHE_VALKEY_PORT', 6379);
   }
 
   getRequiredConfig(key: string): string {

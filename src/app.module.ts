@@ -11,6 +11,7 @@ import { ConfigsService } from './configs/configs.service';
 
 import { InboundsModule } from './inbounds/inbounds.module';
 import { OutboundsModule } from './outbounds/outbounds.module';
+import { CachesModule } from './caches/caches.module';
 
 @Module({
   imports: [
@@ -33,8 +34,18 @@ import { OutboundsModule } from './outbounds/outbounds.module';
       inject: [ConfigsService],
     }),
 
+    CachesModule.forRootAsync({
+      imports: [ConfigsModule],
+      useFactory: (configsService: ConfigsService) => ({
+        host: configsService.cacheValkeyHost,
+        port: configsService.cacheValkeyPort,
+      }),
+      inject: [ConfigsService],
+    }),
+
     InboundsModule,
     OutboundsModule,
+    CachesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
