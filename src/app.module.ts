@@ -2,20 +2,21 @@ import { Module } from '@nestjs/common';
 
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
-
+import { LogsModule } from './logs/logs.module';
+import { CachesModule } from './caches/caches.module';
 import { BullModule } from '@nestjs/bullmq';
+import { SeedersModule } from './seeders/seeders.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PrismaService } from './prisma.service';
+import { PrismaModule } from './prisma/prisma.module';
 
 import { ConfigsModule } from './configs/configs.module';
 import { ConfigsService } from './configs/configs.service';
 
 import { InboundsModule } from './inbounds/inbounds.module';
 import { OutboundsModule } from './outbounds/outbounds.module';
-import { CachesModule } from './caches/caches.module';
-import { LogsModule } from './logs/logs.module';
+import { UsersModule } from './users/users.module';
 
 // Function to sanitize sensitive headers
 function sanitizeHeaders(headers: Record<string, any>): Record<string, any> {
@@ -169,12 +170,16 @@ function getHeadersProperty(
       inject: [ConfigsService],
     }),
 
-    InboundsModule,
-    OutboundsModule,
+    PrismaModule,
     CachesModule,
     LogsModule,
+    SeedersModule,
+
+    InboundsModule,
+    OutboundsModule,
+    UsersModule,
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService],
+  providers: [AppService],
 })
 export class AppModule {}
