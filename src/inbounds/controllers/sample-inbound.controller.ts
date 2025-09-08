@@ -1,7 +1,9 @@
 import { Controller, Post, Get } from '@nestjs/common';
 import { SampleInboundService } from '../services/sample-inbound.service';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('inbounds/sample')
+@ApiBearerAuth()
 export class SampleInboundController {
   constructor(private readonly sampleInboundService: SampleInboundService) {}
 

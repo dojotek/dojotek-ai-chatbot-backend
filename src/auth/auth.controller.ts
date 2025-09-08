@@ -12,6 +12,7 @@ import {
   ApiResponse,
   ApiBadRequestResponse,
   ApiUnauthorizedResponse,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { SignInDto, SignInResponseDto } from './dto/sign-in.dto';
@@ -47,6 +48,7 @@ export class AuthController {
   }
 
   @Get('who-am-i')
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get current user information',
     description:
