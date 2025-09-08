@@ -7,6 +7,7 @@ import { BullModule } from '@nestjs/bullmq';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { PrismaService } from './prisma.service';
 
 import { ConfigsModule } from './configs/configs.module';
 import { ConfigsService } from './configs/configs.service';
@@ -174,6 +175,6 @@ function getHeadersProperty(
     LogsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, PrismaService],
 })
 export class AppModule {}
