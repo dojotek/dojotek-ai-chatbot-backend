@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SampleOutbondService } from './services/sample-outbond.service';
 import { SampleOutbondController } from './controllers/sample-outbond.controller';
-import { CachesModule } from 'src/caches/caches.module';
+import { CachesModule } from '../caches/caches.module';
 import { BullModule } from '@nestjs/bullmq';
 
 @Module({

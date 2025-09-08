@@ -4,7 +4,6 @@ import {
   Get,
   Post,
   Request,
-  UseGuards,
   ValidationPipe,
 } from '@nestjs/common';
 import {
@@ -17,15 +16,15 @@ import {
 import { AuthService } from './auth.service';
 import { SignInDto, SignInResponseDto } from './dto/sign-in.dto';
 import type { RequestWithUser } from '../interfaces/request.interface';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { Public } from './decorators/public.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  // @UseGuards(AuthGuard('local'))
   @Post('sign-in')
+  @Public()
   @ApiOperation({
     summary: 'Sign in user',
     description: 'Authenticate user with email and password',
@@ -48,7 +47,6 @@ export class AuthController {
   }
 
   @Get('who-am-i')
-  @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: 'Get current user information',
     description:
