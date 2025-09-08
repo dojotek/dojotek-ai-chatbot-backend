@@ -42,9 +42,12 @@ $ pnpm run start:dev
 $ pnpm run start:prod
 ```
 
-## Run tests
+## Run linter, tests, build
 
 ```bash
+# eslint linter
+$ pnpm run lint
+
 # unit tests
 $ pnpm run test
 
@@ -53,8 +56,26 @@ $ pnpm run test:e2e
 
 # test coverage
 $ pnpm run test:cov
+
+# build
+$ pnpm run build
 ```
 
+## PostgreSQL database with Prisma ORM
+
+```bash
+# generate a new schema migration
+$ pnpm prisma migrate dev --name <name>
+
+# apply pending schema migrations
+$ pnpm prisma migrate deploy
+
+# reset database, and re-apply all schema migrations (Prisma doesn't have rollback feature)
+pnpm prisma migrate reset
+
+# generate Prisma Client, strong-typed ORM interfaces for JS/TS
+pnpm prisma generate
+```
 
 ## Support
 
