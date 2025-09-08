@@ -45,4 +45,13 @@ export class ConfigsService {
   getConfigWithDefault<T>(key: string, defaultValue: T): T {
     return this.configService.get<T>(key, defaultValue);
   }
+
+  // Cache configuration getters
+  get cachePrefixUsers(): string {
+    return this.configService.get<string>('CACHE_PREFIX_USERS', 'users');
+  }
+
+  get cacheTtlUsers(): number {
+    return this.configService.get<number>('CACHE_TTL_USERS', 3600);
+  }
 }

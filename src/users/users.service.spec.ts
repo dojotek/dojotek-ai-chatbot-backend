@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CachesService } from '../caches/caches.service';
+import { ConfigsService } from '../configs/configs.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from '../generated/prisma/client';
@@ -36,6 +38,19 @@ describe('UsersService', () => {
     },
   };
 
+  const mockCachesService = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+    getClient: jest.fn(),
+    onModuleDestroy: jest.fn(),
+  };
+
+  const mockConfigsService = {
+    cachePrefixUsers: 'users',
+    cacheTtlUsers: 3600,
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -44,11 +59,20 @@ describe('UsersService', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
+        {
+          provide: CachesService,
+          useValue: mockCachesService,
+        },
+        {
+          provide: ConfigsService,
+          useValue: mockConfigsService,
+        },
       ],
     }).compile();
 
     service = module.get<UsersService>(UsersService);
-    prismaService = module.get<PrismaService>(PrismaService);
+    cachesService = module.get<CachesService>(CachesService);
+    configsService = module.get<ConfigsService>(ConfigsService);
 
     // Reset all mocks
     jest.clearAllMocks();
@@ -59,28 +83,68 @@ describe('UsersService', () => {
   });
 
   describe('findOne', () => {
-    it('should return a user when found', async () => {
+    it('should return cached user when found in cache', async () => {
       const whereInput = { id: 'test-uuid-123' };
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockCachesService.get.mockResolvedValue(mockUser);
 
       const result = await service.findOne(whereInput);
 
       expect(result).toEqual(mockUser);
+      expect(mockCachesService.get).toHaveBeenCalledWith(
+        'users:findOne:id:test-uuid-123',
+      );
+      expect(mockPrismaService.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('should return user from database and cache it when not in cache', async () => {
+      const whereInput = { id: 'test-uuid-123' };
+      mockCachesService.get.mockResolvedValue(null);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockCachesService.set.mockResolvedValue('OK');
+
+      const result = await service.findOne(whereInput);
+
+      expect(result).toEqual(mockUser);
+      expect(mockCachesService.get).toHaveBeenCalledWith(
+        'users:findOne:id:test-uuid-123',
+      );
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
         where: whereInput,
       });
+      expect(mockCachesService.set).toHaveBeenCalledWith(
+        'users:findOne:id:test-uuid-123',
+        mockUser,
+        3600,
+      );
     });
 
-    it('should return null when user not found', async () => {
+    it('should return null when user not found and not cache null result', async () => {
       const whereInput = { id: 'non-existent-uuid' };
+      mockCachesService.get.mockResolvedValue(null);
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
       const result = await service.findOne(whereInput);
 
       expect(result).toBeNull();
+      expect(mockCachesService.get).toHaveBeenCalledWith(
+        'users:findOne:id:non-existent-uuid',
+      );
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
         where: whereInput,
       });
+      expect(mockCachesService.set).not.toHaveBeenCalled();
+    });
+
+    it('should handle cache key generation for email lookup', async () => {
+      const whereInput = { email: 'test@example.com' };
+      mockCachesService.get.mockResolvedValue(mockUser);
+
+      const result = await service.findOne(whereInput);
+
+      expect(result).toEqual(mockUser);
+      expect(mockCachesService.get).toHaveBeenCalledWith(
+        'users:findOne:email:test@example.com',
+      );
     });
   });
 
@@ -128,9 +192,10 @@ describe('UsersService', () => {
 
     beforeEach(() => {
       mockedBcrypt.hash.mockResolvedValue('hashedPassword123' as never);
+      mockCachesService.set.mockResolvedValue('OK');
     });
 
-    it('should create a user with hashed password', async () => {
+    it('should create a user with hashed password and cache it', async () => {
       mockPrismaService.user.create.mockResolvedValue(mockUser);
 
       const result = await service.create(createUserDto);
@@ -144,6 +209,16 @@ describe('UsersService', () => {
           password: 'hashedPassword123',
         },
       });
+      expect(mockCachesService.set).toHaveBeenCalledWith(
+        'users:findOne:id:test-uuid-123',
+        mockUser,
+        3600,
+      );
+      expect(mockCachesService.set).toHaveBeenCalledWith(
+        'users:findOne:email:test@example.com',
+        mockUser,
+        3600,
+      );
     });
 
     it('should throw ConflictException on unique constraint violation', async () => {
@@ -201,16 +276,22 @@ describe('UsersService', () => {
 
     beforeEach(() => {
       mockedBcrypt.hash.mockResolvedValue('hashedNewPassword123' as never);
+      mockCachesService.set.mockResolvedValue('OK');
+      mockCachesService.del.mockResolvedValue(1);
     });
 
-    it('should update a user with hashed password', async () => {
+    it('should update a user with hashed password and update cache', async () => {
       const whereInput = { id: 'test-uuid-123' };
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.user.update.mockResolvedValue(updatedUser);
 
       const result = await service.update(whereInput, updateUserDto);
 
       expect(result).toEqual(updatedUser);
       expect(mockedBcrypt.hash).toHaveBeenCalledWith('newPassword123', 10);
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
+        where: whereInput,
+      });
       expect(mockPrismaService.user.update).toHaveBeenCalledWith({
         where: whereInput,
         data: {
@@ -219,20 +300,42 @@ describe('UsersService', () => {
           password: 'hashedNewPassword123',
         },
       });
+      // Check cache invalidation
+      expect(mockCachesService.del).toHaveBeenCalledWith(
+        'users:findOne:id:test-uuid-123',
+      );
+      expect(mockCachesService.del).toHaveBeenCalledWith(
+        'users:findOne:email:test@example.com',
+      );
+      // Check new cache entries
+      expect(mockCachesService.set).toHaveBeenCalledWith(
+        'users:findOne:id:test-uuid-123',
+        updatedUser,
+        3600,
+      );
+      expect(mockCachesService.set).toHaveBeenCalledWith(
+        'users:findOne:email:updated@example.com',
+        updatedUser,
+        3600,
+      );
     });
 
-    it('should update a user without password', async () => {
+    it('should update a user without password and update cache', async () => {
       const updateDtoWithoutPassword: UpdateUserDto = {
         email: 'updated@example.com',
         name: 'Updated User',
       };
       const whereInput = { id: 'test-uuid-123' };
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.user.update.mockResolvedValue(updatedUser);
 
       const result = await service.update(whereInput, updateDtoWithoutPassword);
 
       expect(result).toEqual(updatedUser);
       expect(mockedBcrypt.hash).not.toHaveBeenCalled();
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
+        where: whereInput,
+      });
       expect(mockPrismaService.user.update).toHaveBeenCalledWith({
         where: whereInput,
         data: {
@@ -240,6 +343,9 @@ describe('UsersService', () => {
           name: 'Updated User',
         },
       });
+      // Check cache operations
+      expect(mockCachesService.del).toHaveBeenCalled();
+      expect(mockCachesService.set).toHaveBeenCalled();
     });
 
     it('should throw ConflictException on unique constraint violation', async () => {
@@ -292,16 +398,31 @@ describe('UsersService', () => {
   });
 
   describe('delete', () => {
-    it('should delete a user successfully', async () => {
+    beforeEach(() => {
+      mockCachesService.del.mockResolvedValue(1);
+    });
+
+    it('should delete a user successfully and invalidate cache', async () => {
       const whereInput = { id: 'test-uuid-123' };
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.user.delete.mockResolvedValue(mockUser);
 
       const result = await service.delete(whereInput);
 
       expect(result).toEqual(mockUser);
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
+        where: whereInput,
+      });
       expect(mockPrismaService.user.delete).toHaveBeenCalledWith({
         where: whereInput,
       });
+      // Check cache invalidation
+      expect(mockCachesService.del).toHaveBeenCalledWith(
+        'users:findOne:id:test-uuid-123',
+      );
+      expect(mockCachesService.del).toHaveBeenCalledWith(
+        'users:findOne:email:test@example.com',
+      );
     });
 
     it('should throw ConflictException on record not found', async () => {
@@ -310,6 +431,7 @@ describe('UsersService', () => {
         code: 'P2025',
         meta: {},
       };
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
       mockPrismaService.user.delete.mockRejectedValue(prismaError);
 
       await expect(service.delete(whereInput)).rejects.toThrow(
@@ -326,6 +448,7 @@ describe('UsersService', () => {
         code: 'P1001',
         meta: {},
       };
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.user.delete.mockRejectedValue(prismaError);
 
       await expect(service.delete(whereInput)).rejects.toThrow(

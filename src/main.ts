@@ -20,9 +20,9 @@ async function bootstrap() {
   const port = configService.get<number>('PORT', 3000);
 
   await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}`);
+  console.log(`Dojotek AI Chatbot backend is running on: http://localhost:${port}`);
 }
 bootstrap().catch((error) => {
-  console.error('Error starting the application:', error);
+  console.error('Error starting Dojotek AI Chatbot backend:', error);
   process.exit(1);
 });
