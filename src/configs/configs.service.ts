@@ -54,4 +54,13 @@ export class ConfigsService {
   get cacheTtlUsers(): number {
     return this.configService.get<number>('CACHE_TTL_USERS', 3600);
   }
+
+  // JWT configuration getters
+  get jwtSecret(): string {
+    return this.configService.getOrThrow<string>('JWT_SECRET');
+  }
+
+  get jwtExpiresIn(): string {
+    return this.configService.getOrThrow<string>('JWT_EXPIRES_IN', '86400s');
+  }
 }

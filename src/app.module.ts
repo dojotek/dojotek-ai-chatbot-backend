@@ -17,6 +17,7 @@ import { ConfigsService } from './configs/configs.service';
 import { InboundsModule } from './inbounds/inbounds.module';
 import { OutboundsModule } from './outbounds/outbounds.module';
 import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 
 // Function to sanitize sensitive headers
 function sanitizeHeaders(headers: Record<string, any>): Record<string, any> {
@@ -178,6 +179,7 @@ function getHeadersProperty(
     InboundsModule,
     OutboundsModule,
     UsersModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
