@@ -2,9 +2,13 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import otelSDK from './tracing';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  // Start SDK before nestjs factory create
+  otelSDK.start();
+
   const app = await NestFactory.create(AppModule);
 
   // Enable CORS
@@ -23,7 +27,7 @@ async function bootstrap() {
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Dojotek AI Chatbot backend')
     .setDescription(
-      'Dojotek AI Chatbot allows you to build, configure, run, monitor multiple Chatbot AI LLM RAG.',
+      'Dojotek AI Chatbot allows you to build, configure, run, monitor multiple Chatbot AI LLM RAG; and expose to multiple channels (Slack, Microsoft Team, Lark, Discord, Telegram, WhatsApp, etc).',
     )
     .setVersion('1.0')
     .addBearerAuth()

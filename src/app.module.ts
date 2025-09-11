@@ -18,6 +18,7 @@ import { InboundsModule } from './inbounds/inbounds.module';
 import { OutboundsModule } from './outbounds/outbounds.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { OpenTelemetryModule } from 'nestjs-otel';
 
 // Function to sanitize sensitive headers
 function sanitizeHeaders(headers: Record<string, any>): Record<string, any> {
@@ -149,6 +150,23 @@ function getHeadersProperty(
     }),
 
     ConfigsModule,
+
+    OpenTelemetryModule.forRoot({
+      metrics: {
+        hostMetrics: true, // Includes Host Metrics
+        apiMetrics: {
+          // @deprecated - will be removed in 8.0 - you should start using the semcov from opentelemetry metrics instead
+          enable: false, // Includes api metrics
+          defaultAttributes: {
+            // You can set default labels for api metrics
+            // custom: 'label',
+          },
+          ignoreRoutes: ['/favicon.ico'], // You can ignore specific routes (See https://docs.nestjs.com/middleware#excluding-routes for options)
+          ignoreUndefinedRoutes: false, // Records metrics for all URLs, even undefined ones
+          prefix: 'my_prefix', // Add a custom prefix to all API metrics
+        },
+      },
+    }),
 
     BullModule.forRootAsync({
       imports: [ConfigsModule],
