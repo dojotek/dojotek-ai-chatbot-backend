@@ -97,5 +97,24 @@ model Customer {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
 
+  customerStaffs CustomerStaff[]
+
   @@map("customers")
+}
+
+model CustomerStaff {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  customerId String   @map("customer_id") @db.Uuid
+  name       String   @db.VarChar(255)
+  email      String?  @db.VarChar(255)
+  phone      String?  @db.VarChar(50)
+  department String?  @db.VarChar(100)
+  position   String?  @db.VarChar(100)
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  customer              Customer                @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("customer_staffs")
 }
