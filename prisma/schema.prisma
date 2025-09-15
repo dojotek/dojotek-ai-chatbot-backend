@@ -115,6 +115,23 @@ model CustomerStaff {
   updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
 
   customer              Customer                @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerStaffIdentity CustomerStaffIdentity[]
 
   @@map("customer_staffs")
+}
+
+model CustomerStaffIdentity {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  customerStaffId String   @map("customer_staff_id") @db.Uuid
+  platform        String   @db.VarChar(50) // slack, discord, teams, lark, telegram, whatsapp
+  platformUserId  String   @map("platform_user_id") @db.VarChar(255)
+  platformData    Json?    @map("platform_data") @db.JsonB // additional platform-specific data
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  customerStaff CustomerStaff @relation(fields: [customerStaffId], references: [id], onDelete: Cascade)
+
+  @@unique([platform, platformUserId])
+  @@map("customer_staff_identities")
 }
