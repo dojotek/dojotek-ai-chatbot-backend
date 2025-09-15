@@ -98,6 +98,7 @@ model Customer {
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
 
   customerStaffs CustomerStaff[]
+  chatAgents     ChatAgent[]
 
   @@map("customers")
 }
@@ -134,4 +135,20 @@ model CustomerStaffIdentity {
 
   @@unique([platform, platformUserId])
   @@map("customer_staff_identities")
+}
+
+model ChatAgent {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  customerId   String   @map("customer_id") @db.Uuid
+  name         String   @db.VarChar(255)
+  description  String?  @db.Text
+  systemPrompt String   @map("system_prompt") @db.Text
+  config       Json?    @db.JsonB
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  customer   Customer               @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("chat_agents")
 }
