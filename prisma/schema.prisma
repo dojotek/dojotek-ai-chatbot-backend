@@ -118,6 +118,7 @@ model CustomerStaff {
 
   customer              Customer                @relation(fields: [customerId], references: [id], onDelete: Cascade)
   customerStaffIdentity CustomerStaffIdentity[]
+  chatSessions          ChatSession[]
 
   @@map("customer_staffs")
 }
@@ -151,6 +152,7 @@ model ChatAgent {
 
   customer   Customer               @relation(fields: [customerId], references: [id], onDelete: Cascade)
   knowledges ChatAgentKnowledge[]
+  sessions   ChatSession[]
 
   @@map("chat_agents")
 }
@@ -167,4 +169,23 @@ model ChatAgentKnowledge {
 
   @@unique([chatAgentId, knowledgeId])
   @@map("chat_agent_knowledges")
+}
+
+model ChatSession {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  chatAgentId     String   @map("chat_agent_id") @db.Uuid
+  customerStaffId String   @map("customer_staff_id") @db.Uuid
+  platform        String   @db.VarChar(50)
+  platformThreadId String? @map("platform_thread_id") @db.VarChar(255)
+  sessionData     Json?    @map("session_data") @db.JsonB // conversation context, metadata
+  status          String   @default("active") @db.VarChar(50) // active, expired, closed
+  expiresAt       DateTime @map("expires_at") @db.Timestamp(6)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  chatAgent     ChatAgent     @relation(fields: [chatAgentId], references: [id], onDelete: Cascade)
+  customerStaff CustomerStaff @relation(fields: [customerStaffId], references: [id], onDelete: Cascade)
+
+  @@index([customerStaffId, chatAgentId, platform])
+  @@map("chat_sessions")
 }
