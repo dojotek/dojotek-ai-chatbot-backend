@@ -64,6 +64,7 @@ model Knowledge {
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
 
   knowledgeFiles KnowledgeFile[]
+  chatAgents     ChatAgentKnowledge[]
 
   @@map("knowledges")
 }
@@ -149,6 +150,21 @@ model ChatAgent {
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
 
   customer   Customer               @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  knowledges ChatAgentKnowledge[]
 
   @@map("chat_agents")
+}
+
+model ChatAgentKnowledge {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  chatAgentId String   @map("chat_agent_id") @db.Uuid
+  knowledgeId String   @map("knowledge_id") @db.Uuid
+  priority    Int      @default(1) // for knowledge ranking
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  chatAgent ChatAgent @relation(fields: [chatAgentId], references: [id], onDelete: Cascade)
+  knowledge Knowledge @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+
+  @@unique([chatAgentId, knowledgeId])
+  @@map("chat_agent_knowledges")
 }
