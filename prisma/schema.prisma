@@ -185,7 +185,23 @@ model ChatSession {
 
   chatAgent     ChatAgent     @relation(fields: [chatAgentId], references: [id], onDelete: Cascade)
   customerStaff CustomerStaff @relation(fields: [customerStaffId], references: [id], onDelete: Cascade)
+  messages      ChatMessage[]
 
   @@index([customerStaffId, chatAgentId, platform])
   @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  chatSessionId String   @map("chat_session_id") @db.Uuid
+  messageType   String   @map("message_type") @db.VarChar(50) // user, ai, system
+  content       String   @db.Text
+  metadata      Json?    @db.JsonB // message metadata, attachments, etc.
+  platformMessageId String? @map("platform_message_id") @db.VarChar(255)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  chatSession ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+
+  @@index([chatSessionId, createdAt])
+  @@map("chat_messages")
 }
