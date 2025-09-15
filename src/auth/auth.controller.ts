@@ -1,7 +1,9 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
+  InternalServerErrorException,
   Post,
   Request,
   ValidationPipe,
@@ -13,6 +15,7 @@ import {
   ApiBadRequestResponse,
   ApiUnauthorizedResponse,
   ApiBearerAuth,
+  ApiInternalServerErrorResponse,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { SignInDto, SignInResponseDto } from './dto/sign-in.dto';
@@ -63,5 +66,31 @@ export class AuthController {
   })
   whoAmI(@Request() req: RequestWithUser) {
     return req.user;
+  }
+
+  @Get('simulate-http-400')
+  @Public()
+  @ApiOperation({
+    summary: 'Simulate HTTP 400 Bad Request',
+    description: 'Test endpoint that always returns a 400 Bad Request error',
+  })
+  @ApiBadRequestResponse({
+    description: 'Simulated bad request error',
+  })
+  simulateHttp400() {
+    throw new BadRequestException('This is a simulated HTTP 400 Bad Request error');
+  }
+
+  @Get('simulate-http-500')
+  @Public()
+  @ApiOperation({
+    summary: 'Simulate HTTP 500 Internal Server Error',
+    description: 'Test endpoint that always returns a 500 Internal Server Error',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'Simulated internal server error',
+  })
+  simulateHttp500() {
+    throw new InternalServerErrorException('This is a simulated HTTP 500 Internal Server Error');
   }
 }

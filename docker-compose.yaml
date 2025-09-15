@@ -1,0 +1,206 @@
+# ========================================
+# CONFIGURATION PARAMETERS
+# ========================================
+# Modify these values to customize your deployment
+
+# Database Configuration
+x-postgres-config: &postgres-config
+  DB_NAME: dojotek_ai_chatbot
+  DB_USER: dojotek_ai_chatbot
+  DB_PASSWORD: dojotek_ai_chatbot
+
+# Image Versions
+x-image-versions: &image-versions
+  POSTGRES_IMAGE: postgres:17.6-alpine3.22
+  VALKEY_IMAGE: valkey/valkey:8.1.3-alpine
+  PROMETHEUS_IMAGE: prom/prometheus:v3.5.0
+  GRAFANA_IMAGE: grafana/grafana:latest
+  POSTGRES_EXPORTER_IMAGE: prometheuscommunity/postgres-exporter:v0.16.0
+  REDIS_EXPORTER_IMAGE: oliver006/redis_exporter:v1.67.0
+
+# Admin Credentials
+x-admin-config: &admin-config
+  GRAFANA_ADMIN_PASSWORD: dojotek_ai_chatbot
+
+# Port Configuration
+x-port-config: &port-config
+  POSTGRES_PORT: "5432:5432"
+  VALKEY_MQ_PORT: "6380:6379"
+  VALKEY_CACHE_PORT: "6379:6379"
+  PROMETHEUS_PORT: "9090:9090"
+  GRAFANA_PORT: "3001:3000"
+  POSTGRES_EXPORTER_PORT: "9187:9187"
+  VALKEY_MQ_EXPORTER_PORT: "9121:9121"
+  VALKEY_CACHE_EXPORTER_PORT: "9122:9121"
+
+# Network Configuration
+x-network-config: &network-config
+  NETWORK_NAME: dojotek-ai-chatbot-network
+
+# ========================================
+# SERVICES
+# ========================================
+
+services:
+
+  # PostgreSQL Database
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:17.6-alpine3.22}
+    container_name: dojotek-ai-chatbot-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-dojotek_ai_chatbot}
+      POSTGRES_USER: ${DB_USER:-dojotek_ai_chatbot}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dojotek_ai_chatbot}
+    ports:
+      - ${POSTGRES_PORT:-5432:5432}
+    volumes:
+      - dojotek_ai_chatbot_postgres_data:/var/lib/postgresql/data
+    networks:
+      - ${NETWORK_NAME:-dojotek-ai-chatbot-network}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Valkey/Redis for Message Queue
+  valkey-mq:
+    image: ${VALKEY_IMAGE:-valkey/valkey:8.1.3-alpine}
+    container_name: dojotek-ai-chatbot-valkey-mq
+    ports:
+      - ${VALKEY_MQ_PORT:-6380:6379}
+    volumes:
+      - dojotek_ai_chatbot_valkey_mq_data:/data
+    networks:
+      - ${NETWORK_NAME:-dojotek-ai-chatbot-network}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Valkey/Redis for Cache
+  valkey-cache:
+    image: ${VALKEY_IMAGE:-valkey/valkey:8.1.3-alpine}
+    container_name: dojotek-ai-chatbot-valkey-cache
+    ports:
+      - ${VALKEY_CACHE_PORT:-6379:6379}
+    volumes:
+      - dojotek_ai_chatbot_valkey_cache_data:/data
+    networks:
+      - ${NETWORK_NAME:-dojotek-ai-chatbot-network}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus for Metrics
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:-prom/prometheus:v3.5.0}
+    container_name: dojotek-ai-chatbot-prometheus
+    ports:
+      - ${PROMETHEUS_PORT:-9090:9090}
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - ${NETWORK_NAME:-dojotek-ai-chatbot-network}
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+
+  # Grafana for Monitoring Dashboard
+  grafana:
+    image: ${GRAFANA_IMAGE:-grafana/grafana:latest}
+    container_name: dojotek-ai-chatbot-grafana
+    ports:
+      - ${GRAFANA_PORT:-3001:3000}
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-dojotek_ai_chatbot}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - dojotek_ai_chatbot_grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - ${NETWORK_NAME:-dojotek-ai-chatbot-network}
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  # PostgreSQL Exporter for Metrics
+  postgres-exporter:
+    image: ${POSTGRES_EXPORTER_IMAGE:-prometheuscommunity/postgres-exporter:v0.16.0}
+    container_name: dojotek-ai-chatbot-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${DB_USER:-dojotek_ai_chatbot}:${DB_PASSWORD:-dojotek_ai_chatbot}@postgres:5432/${DB_NAME:-dojotek_ai_chatbot}?sslmode=disable"
+    ports:
+      - ${POSTGRES_EXPORTER_PORT:-9187:9187}
+    networks:
+      - ${NETWORK_NAME:-dojotek-ai-chatbot-network}
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9187/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis/Valkey Exporter for Message Queue Metrics
+  valkey-mq-exporter:
+    image: ${REDIS_EXPORTER_IMAGE:-oliver006/redis_exporter:v1.67.0}
+    container_name: dojotek-ai-chatbot-valkey-mq-exporter
+    environment:
+      REDIS_ADDR: "valkey-mq:6379"
+      REDIS_EXPORTER_NAMESPACE: "redis"
+    ports:
+      - ${VALKEY_MQ_EXPORTER_PORT:-9121:9121}
+    networks:
+      - ${NETWORK_NAME:-dojotek-ai-chatbot-network}
+    restart: unless-stopped
+    depends_on:
+      - valkey-mq
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9121/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis/Valkey Exporter for Cache Metrics
+  valkey-cache-exporter:
+    image: ${REDIS_EXPORTER_IMAGE:-oliver006/redis_exporter:v1.67.0}
+    container_name: dojotek-ai-chatbot-valkey-cache-exporter
+    environment:
+      REDIS_ADDR: "valkey-cache:6379"
+      REDIS_EXPORTER_NAMESPACE: "redis"
+    ports:
+      - ${VALKEY_CACHE_EXPORTER_PORT:-9122:9121}
+    networks:
+      - ${NETWORK_NAME:-dojotek-ai-chatbot-network}
+    restart: unless-stopped
+    depends_on:
+      - valkey-cache
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9121/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  dojotek_ai_chatbot_postgres_data:
+  dojotek_ai_chatbot_valkey_mq_data:
+  dojotek_ai_chatbot_valkey_cache_data:
+  dojotek_ai_chatbot_grafana_data:
+
+networks:
+  dojotek-ai-chatbot-network:
+    driver: bridge
