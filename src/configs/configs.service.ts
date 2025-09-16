@@ -96,6 +96,17 @@ export class ConfigsService {
     return this.configService.get<number>('CACHE_TTL_CUSTOMERS', 3600);
   }
 
+  get cachePrefixCustomerStaffs(): string {
+    return this.configService.get<string>(
+      'CACHE_PREFIX_CUSTOMER_STAFFS',
+      'customer-staffs',
+    );
+  }
+
+  get cacheTtlCustomerStaffs(): number {
+    return this.configService.get<number>('CACHE_TTL_CUSTOMER_STAFFS', 3600);
+  }
+
   // JWT configuration getters
   get jwtSecret(): string {
     return this.configService.getOrThrow<string>('JWT_SECRET');
