@@ -24,6 +24,7 @@ import { KnowledgesModule } from './knowledges/knowledges.module';
 import { KnowledgeFilesModule } from './knowledge-files/knowledge-files.module';
 import { CustomersModule } from './customers/customers.module';
 import { CustomerStaffsModule } from './customer-staffs/customer-staffs.module';
+import { ChatAgentsModule } from './chat-agents/chat-agents.module';
 
 // Function to sanitize sensitive headers
 function sanitizeHeaders(headers: Record<string, any>): Record<string, any> {
@@ -208,6 +209,7 @@ function getHeadersProperty(
     KnowledgeFilesModule,
     CustomersModule,
     CustomerStaffsModule,
+    ChatAgentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
