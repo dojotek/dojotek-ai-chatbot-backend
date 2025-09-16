@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { ConfigModule } from '@nestjs/config';
+import { OpenTelemetryModule } from 'nestjs-otel';
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
 import { LogsModule } from './logs/logs.module';
 import { CachesModule } from './caches/caches.module';
@@ -14,11 +15,11 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ConfigsModule } from './configs/configs.module';
 import { ConfigsService } from './configs/configs.service';
 
-import { InboundsModule } from './inbounds/inbounds.module';
-import { OutboundsModule } from './outbounds/outbounds.module';
+import { RolesModule } from './roles/roles.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
-import { OpenTelemetryModule } from 'nestjs-otel';
+import { InboundsModule } from './inbounds/inbounds.module';
+import { OutboundsModule } from './outbounds/outbounds.module';
 
 // Function to sanitize sensitive headers
 function sanitizeHeaders(headers: Record<string, any>): Record<string, any> {
@@ -194,10 +195,11 @@ function getHeadersProperty(
     LogsModule,
     SeedersModule,
 
-    InboundsModule,
-    OutboundsModule,
+    RolesModule,
     UsersModule,
     AuthModule,
+    InboundsModule,
+    OutboundsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
