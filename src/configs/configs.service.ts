@@ -129,6 +129,16 @@ export class ConfigsService {
     return this.configService.get<number>('CACHE_TTL_CHAT_SESSIONS', 3600);
   }
 
+  get cachePrefixChatMessages(): string {
+    return this.configService.get<string>(
+      'CACHE_PREFIX_CHAT_MESSAGES',
+      'chat-messages',
+    );
+  }
+  get cacheTtlChatMessages(): number {
+    return this.configService.get<number>('CACHE_TTL_CHAT_MESSAGES', 3600);
+  }
+
   // JWT configuration getters
   get jwtSecret(): string {
     return this.configService.getOrThrow<string>('JWT_SECRET');

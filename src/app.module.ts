@@ -26,6 +26,7 @@ import { CustomersModule } from './customers/customers.module';
 import { CustomerStaffsModule } from './customer-staffs/customer-staffs.module';
 import { ChatAgentsModule } from './chat-agents/chat-agents.module';
 import { ChatSessionsModule } from './chat-sessions/chat-sessions.module';
+import { ChatMessagesModule } from './chat-messages/chat-messages.module';
 
 // Function to sanitize sensitive headers
 function sanitizeHeaders(headers: Record<string, any>): Record<string, any> {
@@ -212,6 +213,7 @@ function getHeadersProperty(
     CustomerStaffsModule,
     ChatAgentsModule,
     ChatSessionsModule,
+    ChatMessagesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
