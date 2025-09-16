@@ -71,10 +71,23 @@ $ pnpm prisma migrate dev --name <name>
 $ pnpm prisma migrate deploy
 
 # reset database, and re-apply all schema migrations (Prisma doesn't have rollback feature)
-pnpm prisma migrate reset
+$ pnpm prisma migrate reset
 
 # generate Prisma Client, strong-typed ORM interfaces for JS/TS
-pnpm prisma generate
+$ pnpm prisma generate
+```
+
+## Database seeders
+
+```bash
+# seed roles only
+$ pnpm run seed:roles
+
+# seed users only (requires roles to be seeded first)
+$ pnpm run seed:users
+
+# seed all data (roles first, then users)
+$ pnpm run seed:all
 ```
 
 ## Support
