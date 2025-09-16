@@ -24,6 +24,8 @@ describe('UsersService', () => {
     email: 'test@example.com',
     password: 'hashedPassword123',
     name: 'Test User',
+    roleId: 'test-role-id',
+    isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -71,8 +73,6 @@ describe('UsersService', () => {
     }).compile();
 
     service = module.get<UsersService>(UsersService);
-    cachesService = module.get<CachesService>(CachesService);
-    configsService = module.get<ConfigsService>(ConfigsService);
 
     // Reset all mocks
     jest.clearAllMocks();
@@ -188,6 +188,7 @@ describe('UsersService', () => {
       email: 'test@example.com',
       password: 'plainPassword123',
       name: 'Test User',
+      roleId: 'test-role-id',
     };
 
     beforeEach(() => {
@@ -207,6 +208,11 @@ describe('UsersService', () => {
           email: 'test@example.com',
           name: 'Test User',
           password: 'hashedPassword123',
+          role: {
+            connect: {
+              id: 'test-role-id',
+            },
+          },
         },
       });
       expect(mockCachesService.set).toHaveBeenCalledWith(

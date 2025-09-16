@@ -80,7 +80,7 @@ export class UsersService {
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const { password, ...userData } = createUserDto;
+    const { password, roleId, ...userData } = createUserDto;
     const hashedPassword = await bcrypt.hash(password, 10);
 
     try {
@@ -88,6 +88,11 @@ export class UsersService {
         data: {
           ...userData,
           password: hashedPassword,
+          role: {
+            connect: {
+              id: roleId,
+            },
+          },
         },
       });
 

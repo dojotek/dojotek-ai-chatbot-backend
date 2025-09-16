@@ -21,6 +21,7 @@ describe('UsersController', () => {
     email: 'test@example.com',
     password: 'password123',
     name: 'Test User',
+    roleId: '1',
   };
 
   const mockUpdateUserDto: UpdateUserDto = {
@@ -101,7 +102,12 @@ describe('UsersController', () => {
 
       const result = await controller.findAll();
 
-      expect(mockUsersService.findMany).toHaveBeenCalledWith({});
+      expect(mockUsersService.findMany).toHaveBeenCalledWith({
+        skip: undefined,
+        take: 10,
+        where: undefined,
+        orderBy: { createdAt: 'desc' },
+      });
       expect(result).toEqual(mockUsers);
     });
 
@@ -113,7 +119,12 @@ describe('UsersController', () => {
       mockUsersService.findMany.mockRejectedValue(httpException);
 
       await expect(controller.findAll()).rejects.toThrow(httpException);
-      expect(mockUsersService.findMany).toHaveBeenCalledWith({});
+      expect(mockUsersService.findMany).toHaveBeenCalledWith({
+        skip: undefined,
+        take: 10,
+        where: undefined,
+        orderBy: { createdAt: 'desc' },
+      });
     });
 
     it('should throw HttpException with INTERNAL_SERVER_ERROR when service throws unexpected error', async () => {
@@ -126,7 +137,32 @@ describe('UsersController', () => {
           HttpStatus.INTERNAL_SERVER_ERROR,
         ),
       );
-      expect(mockUsersService.findMany).toHaveBeenCalledWith({});
+      expect(mockUsersService.findMany).toHaveBeenCalledWith({
+        skip: undefined,
+        take: 10,
+        where: undefined,
+        orderBy: { createdAt: 'desc' },
+      });
+    });
+
+    it('should return users with query parameters', async () => {
+      const mockUsers = [mockUser];
+      mockUsersService.findMany.mockResolvedValue(mockUsers);
+
+      const result = await controller.findAll(5, 20, 'test');
+
+      expect(mockUsersService.findMany).toHaveBeenCalledWith({
+        skip: 5,
+        take: 20,
+        where: {
+          OR: [
+            { email: { contains: 'test', mode: 'insensitive' } },
+            { name: { contains: 'test', mode: 'insensitive' } },
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      expect(result).toEqual(mockUsers);
     });
   });
 
@@ -228,7 +264,7 @@ describe('UsersController', () => {
       const result = await controller.remove('1');
 
       expect(mockUsersService.delete).toHaveBeenCalledWith({ id: '1' });
-      expect(result).toEqual(mockUser);
+      expect(result).toBeUndefined();
     });
 
     it('should throw HttpException when service throws HttpException', async () => {
