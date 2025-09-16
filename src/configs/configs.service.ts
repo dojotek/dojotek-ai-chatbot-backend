@@ -74,6 +74,17 @@ export class ConfigsService {
     return this.configService.get<number>('CACHE_TTL_KNOWLEDGES', 3600);
   }
 
+  get cachePrefixKnowledgeFiles(): string {
+    return this.configService.get<string>(
+      'CACHE_PREFIX_KNOWLEDGE_FILES',
+      'knowledge-files',
+    );
+  }
+
+  get cacheTtlKnowledgeFiles(): number {
+    return this.configService.get<number>('CACHE_TTL_KNOWLEDGE_FILES', 3600);
+  }
+
   // JWT configuration getters
   get jwtSecret(): string {
     return this.configService.getOrThrow<string>('JWT_SECRET');
