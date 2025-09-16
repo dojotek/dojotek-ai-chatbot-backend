@@ -78,19 +78,24 @@ export class AuthController {
     description: 'Simulated bad request error',
   })
   simulateHttp400() {
-    throw new BadRequestException('This is a simulated HTTP 400 Bad Request error');
+    throw new BadRequestException(
+      'This is a simulated HTTP 400 Bad Request error',
+    );
   }
 
   @Get('simulate-http-500')
   @Public()
   @ApiOperation({
     summary: 'Simulate HTTP 500 Internal Server Error',
-    description: 'Test endpoint that always returns a 500 Internal Server Error',
+    description:
+      'Test endpoint that always returns a 500 Internal Server Error',
   })
   @ApiInternalServerErrorResponse({
     description: 'Simulated internal server error',
   })
   simulateHttp500() {
-    throw new InternalServerErrorException('This is a simulated HTTP 500 Internal Server Error');
+    throw new InternalServerErrorException(
+      'This is a simulated HTTP 500 Internal Server Error',
+    );
   }
 }
