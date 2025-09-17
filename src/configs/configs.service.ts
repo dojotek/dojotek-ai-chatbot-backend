@@ -139,6 +139,50 @@ export class ConfigsService {
     return this.configService.get<number>('CACHE_TTL_CHAT_MESSAGES', 3600);
   }
 
+  // Inbound chat deduplication TTL getters
+  get inboundChatDeduplicationTtlSample(): number {
+    return this.configService.get<number>(
+      'INBOUND_CHAT_DEDUPLICATION_TTL_SAMPLE',
+      300,
+    );
+  }
+
+  get inboundChatDeduplicationTtlSlack(): number {
+    return this.configService.get<number>(
+      'INBOUND_CHAT_DEDUPLICATION_TTL_SLACK',
+      300,
+    );
+  }
+
+  get inboundChatDeduplicationTtlLark(): number {
+    return this.configService.get<number>(
+      'INBOUND_CHAT_DEDUPLICATION_TTL_LARK',
+      300,
+    );
+  }
+
+  // Inbound chat session TTL getters
+  get inboundChatSessionTtlSample(): number {
+    return this.configService.get<number>(
+      'INBOUND_CHAT_SESSION_TTL_SAMPLE',
+      3600,
+    );
+  }
+
+  get inboundChatSessionTtlSlack(): number {
+    return this.configService.get<number>(
+      'INBOUND_CHAT_SESSION_TTL_SLACK',
+      3600,
+    );
+  }
+
+  get inboundChatSessionTtlLark(): number {
+    return this.configService.get<number>(
+      'INBOUND_CHAT_SESSION_TTL_LARK',
+      3600,
+    );
+  }
+
   // JWT configuration getters
   get jwtSecret(): string {
     return this.configService.getOrThrow<string>('JWT_SECRET');
