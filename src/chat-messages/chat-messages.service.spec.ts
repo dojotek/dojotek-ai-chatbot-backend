@@ -179,6 +179,67 @@ describe('ChatMessagesService', () => {
         3600,
       );
     });
+
+    it('should throw ConflictException on unique constraint violation (P2002)', async () => {
+      const prismaError = {
+        code: 'P2002',
+        meta: { target: ['platformMessageId'] },
+      };
+      mockPrismaService.chatMessage.create.mockRejectedValue(prismaError);
+
+      await expect(service.create(createChatMessageDto)).rejects.toThrow(
+        'platformMessageId already exists',
+      );
+    });
+
+    it('should throw ConflictException on foreign key constraint failure (P2003)', async () => {
+      const prismaError = {
+        code: 'P2003',
+      };
+      mockPrismaService.chatMessage.create.mockRejectedValue(prismaError);
+
+      await expect(service.create(createChatMessageDto)).rejects.toThrow(
+        'Chat session not found',
+      );
+    });
+
+    it('should throw InternalServerErrorException on other Prisma errors', async () => {
+      const prismaError = {
+        code: 'P2001',
+      };
+      mockPrismaService.chatMessage.create.mockRejectedValue(prismaError);
+
+      await expect(service.create(createChatMessageDto)).rejects.toThrow(
+        'Database operation failed',
+      );
+    });
+
+    it('should re-throw non-Prisma errors', async () => {
+      const genericError = new Error('Network error');
+      mockPrismaService.chatMessage.create.mockRejectedValue(genericError);
+
+      await expect(service.create(createChatMessageDto)).rejects.toThrow(
+        'Network error',
+      );
+    });
+
+    it('should handle null errors', async () => {
+      mockPrismaService.chatMessage.create.mockRejectedValue(null);
+
+      await expect(service.create(createChatMessageDto)).rejects.toBe(null);
+    });
+
+    it('should handle unique constraint violation without target field', async () => {
+      const prismaError = {
+        code: 'P2002',
+        meta: {},
+      };
+      mockPrismaService.chatMessage.create.mockRejectedValue(prismaError);
+
+      await expect(service.create(createChatMessageDto)).rejects.toThrow(
+        'field already exists',
+      );
+    });
   });
 
   describe('update', () => {
@@ -210,6 +271,123 @@ describe('ChatMessagesService', () => {
         3600,
       );
     });
+
+    it('should update chat message with chatSessionId relationship', async () => {
+      const updateDtoWithSession = {
+        ...updateDto,
+        chatSessionId: 'new-session-id',
+      };
+      const updatedChatMessage = { ...mockChatMessage, ...updateDto };
+      mockPrismaService.chatMessage.findUnique.mockResolvedValue(
+        mockChatMessage,
+      );
+      mockPrismaService.chatMessage.update.mockResolvedValue(
+        updatedChatMessage,
+      );
+
+      const result = await service.update(
+        { id: 'test-uuid-123' },
+        updateDtoWithSession,
+      );
+
+      expect(result).toEqual(updatedChatMessage);
+      expect(mockPrismaService.chatMessage.update).toHaveBeenCalledWith({
+        data: {
+          content: 'Updated message',
+          messageType: MessageType.AI,
+          chatSession: {
+            connect: {
+              id: 'new-session-id',
+            },
+          },
+        },
+        where: { id: 'test-uuid-123' },
+      });
+    });
+
+    it('should throw ConflictException on unique constraint violation (P2002)', async () => {
+      const prismaError = {
+        code: 'P2002',
+        meta: { target: ['platformMessageId'] },
+      };
+      mockPrismaService.chatMessage.findUnique.mockResolvedValue(
+        mockChatMessage,
+      );
+      mockPrismaService.chatMessage.update.mockRejectedValue(prismaError);
+
+      await expect(
+        service.update({ id: 'test-uuid-123' }, updateDto),
+      ).rejects.toThrow('platformMessageId already exists');
+    });
+
+    it('should throw ConflictException on record not found (P2025)', async () => {
+      const prismaError = {
+        code: 'P2025',
+      };
+      mockPrismaService.chatMessage.findUnique.mockResolvedValue(
+        mockChatMessage,
+      );
+      mockPrismaService.chatMessage.update.mockRejectedValue(prismaError);
+
+      await expect(
+        service.update({ id: 'non-existent' }, updateDto),
+      ).rejects.toThrow('Chat message not found');
+    });
+
+    it('should throw ConflictException on foreign key constraint failure (P2003)', async () => {
+      const prismaError = {
+        code: 'P2003',
+      };
+      mockPrismaService.chatMessage.findUnique.mockResolvedValue(
+        mockChatMessage,
+      );
+      mockPrismaService.chatMessage.update.mockRejectedValue(prismaError);
+
+      await expect(
+        service.update({ id: 'test-uuid-123' }, updateDto),
+      ).rejects.toThrow('Chat session not found');
+    });
+
+    it('should throw InternalServerErrorException on other Prisma errors', async () => {
+      const prismaError = {
+        code: 'P2001',
+      };
+      mockPrismaService.chatMessage.findUnique.mockResolvedValue(
+        mockChatMessage,
+      );
+      mockPrismaService.chatMessage.update.mockRejectedValue(prismaError);
+
+      await expect(
+        service.update({ id: 'test-uuid-123' }, updateDto),
+      ).rejects.toThrow('Database operation failed');
+    });
+
+    it('should re-throw non-Prisma errors', async () => {
+      const genericError = new Error('Network error');
+      mockPrismaService.chatMessage.findUnique.mockResolvedValue(
+        mockChatMessage,
+      );
+      mockPrismaService.chatMessage.update.mockRejectedValue(genericError);
+
+      await expect(
+        service.update({ id: 'test-uuid-123' }, updateDto),
+      ).rejects.toThrow('Network error');
+    });
+
+    it('should handle unique constraint violation without target field', async () => {
+      const prismaError = {
+        code: 'P2002',
+        meta: {},
+      };
+      mockPrismaService.chatMessage.findUnique.mockResolvedValue(
+        mockChatMessage,
+      );
+      mockPrismaService.chatMessage.update.mockRejectedValue(prismaError);
+
+      await expect(
+        service.update({ id: 'test-uuid-123' }, updateDto),
+      ).rejects.toThrow('field already exists');
+    });
   });
 
   describe('delete', () => {
@@ -226,6 +404,46 @@ describe('ChatMessagesService', () => {
         where: { id: 'test-uuid-123' },
       });
       expect(mockCachesService.del).toHaveBeenCalled();
+    });
+
+    it('should throw ConflictException on record not found (P2025)', async () => {
+      const prismaError = {
+        code: 'P2025',
+      };
+      mockPrismaService.chatMessage.findUnique.mockResolvedValue(
+        mockChatMessage,
+      );
+      mockPrismaService.chatMessage.delete.mockRejectedValue(prismaError);
+
+      await expect(service.delete({ id: 'non-existent' })).rejects.toThrow(
+        'Chat message not found',
+      );
+    });
+
+    it('should throw InternalServerErrorException on other Prisma errors', async () => {
+      const prismaError = {
+        code: 'P2001',
+      };
+      mockPrismaService.chatMessage.findUnique.mockResolvedValue(
+        mockChatMessage,
+      );
+      mockPrismaService.chatMessage.delete.mockRejectedValue(prismaError);
+
+      await expect(service.delete({ id: 'test-uuid-123' })).rejects.toThrow(
+        'Database operation failed',
+      );
+    });
+
+    it('should re-throw non-Prisma errors', async () => {
+      const genericError = new Error('Network error');
+      mockPrismaService.chatMessage.findUnique.mockResolvedValue(
+        mockChatMessage,
+      );
+      mockPrismaService.chatMessage.delete.mockRejectedValue(genericError);
+
+      await expect(service.delete({ id: 'test-uuid-123' })).rejects.toThrow(
+        'Network error',
+      );
     });
   });
 });
