@@ -2,6 +2,7 @@ import {
   Injectable,
   ConflictException,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChatSession, Prisma } from '../generated/prisma/client';
@@ -26,6 +27,8 @@ function isPrismaError(error: unknown): error is PrismaError {
 
 @Injectable()
 export class ChatSessionsService {
+  private readonly logger = new Logger(ChatSessionsService.name);
+
   constructor(
     private prisma: PrismaService,
     private cachesService: CachesService,
@@ -260,6 +263,79 @@ export class ChatSessionsService {
     }
   }
 
+  async getInboundChatSessionId(
+    chatAgentId: string,
+    customerId: string,
+    customerStaffId: string,
+    platform: string,
+  ): Promise<string> {
+    // Generate cache key for inbound chat session
+    const cacheKey = this.generateInboundChatSessionCacheKey(
+      chatAgentId,
+      customerId,
+      customerStaffId,
+      platform,
+    );
+
+    // Try to get from cache first
+    const cachedSessionId = await this.cachesService.get<string>(cacheKey);
+    if (cachedSessionId) {
+      this.logger.debug(`Found cached chat session ID: ${cachedSessionId}`);
+      return cachedSessionId;
+    }
+
+    // Search in database
+    const existingSession = await this.prisma.chatSession.findFirst({
+      where: {
+        chatAgentId,
+        customerStaffId,
+        platform,
+        expiresAt: {
+          gt: new Date(), // Only active sessions
+        },
+      },
+      orderBy: {
+        createdAt: 'desc', // Get the most recent active session
+      },
+    });
+
+    if (existingSession) {
+      // Cache the existing session ID
+      await this.cachesService.set(
+        cacheKey,
+        existingSession.id,
+        this.configsService.inboundChatSessionTtlSample,
+      );
+      this.logger.debug(
+        `Found existing chat session ID: ${existingSession.id}`,
+      );
+      return existingSession.id;
+    }
+
+    // Create new session if none exists
+    const newSession = await this.prisma.chatSession.create({
+      data: {
+        chatAgentId,
+        customerStaffId,
+        platform,
+        expiresAt: new Date(
+          Date.now() + this.configsService.inboundChatSessionTtlSample * 1000,
+        ),
+        status: 'active',
+      },
+    });
+
+    // Cache the new session ID
+    await this.cachesService.set(
+      cacheKey,
+      newSession.id,
+      this.configsService.inboundChatSessionTtlSample,
+    );
+
+    this.logger.debug(`Created new chat session ID: ${newSession.id}`);
+    return newSession.id;
+  }
+
   /**
    * Generate cache key for chatSession operations
    */
@@ -276,6 +352,19 @@ export class ChatSessionsService {
     }
 
     return keyParts.join(':');
+  }
+
+  /**
+   * Generate cache key for inbound chat session lookup
+   */
+  private generateInboundChatSessionCacheKey(
+    chatAgentId: string,
+    customerId: string,
+    customerStaffId: string,
+    platform: string,
+  ): string {
+    const prefix = this.configsService.cachePrefixChatSessions;
+    return `${prefix}:inbound:${chatAgentId}:${customerId}:${customerStaffId}:${platform}`;
   }
 
   /**
