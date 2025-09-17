@@ -1,10 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException } from '@nestjs/common';
+import {
+  ConflictException,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { KnowledgesService } from './knowledges.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CachesService } from '../caches/caches.service';
 import { ConfigsService } from '../configs/configs.service';
 import { CreateKnowledgeDto } from './dto/create-knowledge.dto';
+import { UpdateKnowledgeDto } from './dto/update-knowledge.dto';
 import { Knowledge } from '../generated/prisma/client';
 
 describe('KnowledgesService', () => {
@@ -207,6 +212,287 @@ describe('KnowledgesService', () => {
       await expect(service.create(createKnowledgeDto)).rejects.toThrow(
         'name already exists',
       );
+    });
+
+    it('should throw ConflictException with default field name when meta is missing', async () => {
+      const prismaError = {
+        code: 'P2002',
+        meta: {},
+      };
+      mockPrismaService.knowledge.create.mockRejectedValue(prismaError);
+
+      await expect(service.create(createKnowledgeDto)).rejects.toThrow(
+        ConflictException,
+      );
+      await expect(service.create(createKnowledgeDto)).rejects.toThrow(
+        'field already exists',
+      );
+    });
+
+    it('should throw InternalServerErrorException on other Prisma errors', async () => {
+      const prismaError = {
+        code: 'P2003',
+      };
+      mockPrismaService.knowledge.create.mockRejectedValue(prismaError);
+
+      await expect(service.create(createKnowledgeDto)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+      await expect(service.create(createKnowledgeDto)).rejects.toThrow(
+        'Database operation failed',
+      );
+    });
+
+    it('should re-throw non-Prisma errors', async () => {
+      const customError = new Error('Custom error');
+      mockPrismaService.knowledge.create.mockRejectedValue(customError);
+
+      await expect(service.create(createKnowledgeDto)).rejects.toThrow(
+        'Custom error',
+      );
+    });
+  });
+
+  describe('update', () => {
+    const updateKnowledgeDto: UpdateKnowledgeDto = {
+      name: 'Updated Product Documentation',
+      description: 'Updated description',
+      category: 'updated-documentation',
+      isActive: false,
+    };
+
+    const whereInput = { id: 'test-knowledge-uuid-123' };
+
+    beforeEach(() => {
+      mockCachesService.set.mockResolvedValue('OK');
+      mockCachesService.del.mockResolvedValue(1);
+    });
+
+    it('should update knowledge and manage cache correctly', async () => {
+      const updatedKnowledge = { ...mockKnowledge, ...updateKnowledgeDto };
+
+      mockPrismaService.knowledge.findUnique.mockResolvedValue(mockKnowledge);
+      mockPrismaService.knowledge.update.mockResolvedValue(updatedKnowledge);
+
+      const result = await service.update(whereInput, updateKnowledgeDto);
+
+      expect(result).toEqual(updatedKnowledge);
+      expect(mockPrismaService.knowledge.findUnique).toHaveBeenCalledWith({
+        where: whereInput,
+      });
+      expect(mockPrismaService.knowledge.update).toHaveBeenCalledWith({
+        data: updateKnowledgeDto,
+        where: whereInput,
+      });
+      expect(mockCachesService.del).toHaveBeenCalledWith(
+        'knowledges:findOne:id:test-knowledge-uuid-123',
+      );
+      expect(mockCachesService.set).toHaveBeenCalledWith(
+        'knowledges:findOne:id:test-knowledge-uuid-123',
+        updatedKnowledge,
+        3600,
+      );
+    });
+
+    it('should throw NotFoundException when knowledge does not exist', async () => {
+      mockPrismaService.knowledge.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.update(whereInput, updateKnowledgeDto),
+      ).rejects.toThrow(NotFoundException);
+      await expect(
+        service.update(whereInput, updateKnowledgeDto),
+      ).rejects.toThrow('Knowledge not found');
+    });
+
+    it('should throw ConflictException on unique constraint violation', async () => {
+      const prismaError = {
+        code: 'P2002',
+        meta: { target: ['name'] },
+      };
+
+      mockPrismaService.knowledge.findUnique.mockResolvedValue(mockKnowledge);
+      mockPrismaService.knowledge.update.mockRejectedValue(prismaError);
+
+      await expect(
+        service.update(whereInput, updateKnowledgeDto),
+      ).rejects.toThrow(ConflictException);
+      await expect(
+        service.update(whereInput, updateKnowledgeDto),
+      ).rejects.toThrow('name already exists');
+    });
+
+    it('should throw NotFoundException on P2025 error (record not found)', async () => {
+      const prismaError = {
+        code: 'P2025',
+      };
+
+      mockPrismaService.knowledge.findUnique.mockResolvedValue(mockKnowledge);
+      mockPrismaService.knowledge.update.mockRejectedValue(prismaError);
+
+      await expect(
+        service.update(whereInput, updateKnowledgeDto),
+      ).rejects.toThrow(NotFoundException);
+      await expect(
+        service.update(whereInput, updateKnowledgeDto),
+      ).rejects.toThrow('Knowledge not found');
+    });
+
+    it('should throw InternalServerErrorException on other Prisma errors', async () => {
+      const prismaError = {
+        code: 'P2003',
+      };
+
+      mockPrismaService.knowledge.findUnique.mockResolvedValue(mockKnowledge);
+      mockPrismaService.knowledge.update.mockRejectedValue(prismaError);
+
+      await expect(
+        service.update(whereInput, updateKnowledgeDto),
+      ).rejects.toThrow(InternalServerErrorException);
+      await expect(
+        service.update(whereInput, updateKnowledgeDto),
+      ).rejects.toThrow('Database operation failed');
+    });
+
+    it('should re-throw non-Prisma errors', async () => {
+      const customError = new Error('Custom update error');
+
+      mockPrismaService.knowledge.findUnique.mockResolvedValue(mockKnowledge);
+      mockPrismaService.knowledge.update.mockRejectedValue(customError);
+
+      await expect(
+        service.update(whereInput, updateKnowledgeDto),
+      ).rejects.toThrow('Custom update error');
+    });
+  });
+
+  describe('delete', () => {
+    const whereInput = { id: 'test-knowledge-uuid-123' };
+
+    beforeEach(() => {
+      mockCachesService.del.mockResolvedValue(1);
+    });
+
+    it('should delete knowledge and invalidate cache', async () => {
+      mockPrismaService.knowledge.findUnique.mockResolvedValue(mockKnowledge);
+      mockPrismaService.knowledge.delete.mockResolvedValue(mockKnowledge);
+
+      const result = await service.delete(whereInput);
+
+      expect(result).toEqual(mockKnowledge);
+      expect(mockPrismaService.knowledge.findUnique).toHaveBeenCalledWith({
+        where: whereInput,
+      });
+      expect(mockPrismaService.knowledge.delete).toHaveBeenCalledWith({
+        where: whereInput,
+      });
+      expect(mockCachesService.del).toHaveBeenCalledWith(
+        'knowledges:findOne:id:test-knowledge-uuid-123',
+      );
+    });
+
+    it('should throw NotFoundException when knowledge does not exist before delete', async () => {
+      mockPrismaService.knowledge.findUnique.mockResolvedValue(null);
+
+      await expect(service.delete(whereInput)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.delete(whereInput)).rejects.toThrow(
+        'Knowledge not found',
+      );
+    });
+
+    it('should throw NotFoundException on P2025 error (record not found)', async () => {
+      const prismaError = {
+        code: 'P2025',
+      };
+
+      mockPrismaService.knowledge.findUnique.mockResolvedValue(mockKnowledge);
+      mockPrismaService.knowledge.delete.mockRejectedValue(prismaError);
+
+      await expect(service.delete(whereInput)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.delete(whereInput)).rejects.toThrow(
+        'Knowledge not found',
+      );
+    });
+
+    it('should throw ConflictException on foreign key constraint violation', async () => {
+      const prismaError = {
+        code: 'P2003',
+      };
+
+      mockPrismaService.knowledge.findUnique.mockResolvedValue(mockKnowledge);
+      mockPrismaService.knowledge.delete.mockRejectedValue(prismaError);
+
+      await expect(service.delete(whereInput)).rejects.toThrow(
+        ConflictException,
+      );
+      await expect(service.delete(whereInput)).rejects.toThrow(
+        'Cannot delete knowledge as it is being used by chat agents or files',
+      );
+    });
+
+    it('should throw InternalServerErrorException on other Prisma errors', async () => {
+      const prismaError = {
+        code: 'P2001',
+      };
+
+      mockPrismaService.knowledge.findUnique.mockResolvedValue(mockKnowledge);
+      mockPrismaService.knowledge.delete.mockRejectedValue(prismaError);
+
+      await expect(service.delete(whereInput)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+      await expect(service.delete(whereInput)).rejects.toThrow(
+        'Database operation failed',
+      );
+    });
+
+    it('should re-throw non-Prisma errors', async () => {
+      const customError = new Error('Custom delete error');
+
+      mockPrismaService.knowledge.findUnique.mockResolvedValue(mockKnowledge);
+      mockPrismaService.knowledge.delete.mockRejectedValue(customError);
+
+      await expect(service.delete(whereInput)).rejects.toThrow(
+        'Custom delete error',
+      );
+    });
+  });
+
+  describe('private methods', () => {
+    describe('generateCacheKey', () => {
+      it('should generate correct cache key with id parameter', () => {
+        // Access private method through bracket notation for testing
+        const cacheKey = (
+          service as unknown as {
+            generateCacheKey: (
+              operation: string,
+              where: { id: string },
+            ) => string;
+          }
+        ).generateCacheKey('findOne', {
+          id: 'test-id',
+        });
+        expect(cacheKey).toBe('knowledges:findOne:id:test-id');
+      });
+    });
+
+    describe('invalidateKnowledgeCache', () => {
+      it('should call del with correct cache key', async () => {
+        // Access private method through bracket notation for testing
+        await (
+          service as unknown as {
+            invalidateKnowledgeCache: (knowledge: Knowledge) => Promise<void>;
+          }
+        ).invalidateKnowledgeCache(mockKnowledge);
+
+        expect(mockCachesService.del).toHaveBeenCalledWith(
+          'knowledges:findOne:id:test-knowledge-uuid-123',
+        );
+      });
     });
   });
 });
