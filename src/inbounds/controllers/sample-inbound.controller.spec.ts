@@ -9,7 +9,7 @@ describe('SampleInboundController', () => {
 
   beforeEach(async () => {
     const mockSampleInboundService = {
-      submit: jest.fn(),
+      sampleSubmit: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -24,7 +24,7 @@ describe('SampleInboundController', () => {
 
     controller = module.get<SampleInboundController>(SampleInboundController);
     sampleInboundService = module.get(SampleInboundService);
-    submitSpy = jest.spyOn(sampleInboundService, 'submit');
+    submitSpy = jest.spyOn(sampleInboundService, 'sampleSubmit');
   });
 
   afterEach(() => {
@@ -42,7 +42,7 @@ describe('SampleInboundController', () => {
       submitSpy.mockResolvedValue(expectedResult);
 
       // Act
-      const result = await controller.sampleCreate();
+      const result = await controller.sampleSubmit();
 
       // Assert
       expect(submitSpy).toHaveBeenCalledTimes(1);
@@ -56,7 +56,7 @@ describe('SampleInboundController', () => {
       submitSpy.mockRejectedValue(error);
 
       // Act & Assert
-      await expect(controller.sampleCreate()).rejects.toThrow('Service error');
+      await expect(controller.sampleSubmit()).rejects.toThrow('Service error');
       expect(submitSpy).toHaveBeenCalledTimes(1);
     });
 
@@ -66,7 +66,7 @@ describe('SampleInboundController', () => {
       submitSpy.mockResolvedValue(customResult);
 
       // Act
-      const result = await controller.sampleCreate();
+      const result = await controller.sampleSubmit();
 
       // Assert
       expect(result).toBe(customResult);
@@ -78,7 +78,7 @@ describe('SampleInboundController', () => {
       submitSpy.mockResolvedValue('OK');
 
       // Act
-      await controller.sampleCreate();
+      await controller.sampleSubmit();
 
       // Assert
       expect(submitSpy).toHaveBeenCalledWith();

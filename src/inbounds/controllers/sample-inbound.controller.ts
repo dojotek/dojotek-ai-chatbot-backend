@@ -1,15 +1,22 @@
-import { Controller, Post, Get } from '@nestjs/common';
+import { Controller, Post, Get, Body } from '@nestjs/common';
 import { SampleInboundService } from '../services/sample-inbound.service';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { SubmitDto } from '../dto/submit.dto';
 
-@Controller('inbounds/sample')
+@ApiTags('sample-inbound')
 @ApiBearerAuth()
+@Controller('inbounds/sample')
 export class SampleInboundController {
   constructor(private readonly sampleInboundService: SampleInboundService) {}
 
   @Post('v2025.09.05')
-  async sampleCreate() {
-    return await this.sampleInboundService.submit();
+  async sampleSubmit() {
+    return await this.sampleInboundService.sampleSubmit();
+  }
+
+  @Post('v2025.09.17')
+  async submit(@Body() submitDto: SubmitDto) {
+    return await this.sampleInboundService.submit(submitDto);
   }
 
   @Get('log/debug')
