@@ -5,6 +5,66 @@ import { ConfigService } from '@nestjs/config';
 export class ConfigsService {
   constructor(private configService: ConfigService) {}
 
+  getRequiredConfig(key: string): string {
+    const value = this.configService.get<string>(key);
+    if (!value) {
+      throw new Error(`Required configuration ${key} is not set`);
+    }
+    return value;
+  }
+
+  // Helper method to get configuration with default value
+  getConfigWithDefault<T>(key: string, defaultValue: T): T {
+    return this.configService.get<T>(key, defaultValue);
+  }
+
+  get openaiApiKey(): string {
+    return this.configService.get<string>('OPENAI_API_KEY', '');
+  }
+
+  get anthropicApiKey(): string {
+    return this.configService.get<string>('ANTHROPIC_API_KEY', '');
+  }
+
+  get storageProvider(): string {
+    return this.configService.get<string>('STORAGE_PROVIDER', 's3');
+  }
+
+  get awsRegion(): string {
+    return this.configService.get<string>('AWS_REGION', '');
+  }
+
+  get awsAccessKeyId(): string {
+    return this.configService.get<string>('AWS_ACCESS_KEY_ID', '');
+  }
+
+  get awsSecretAccessKey(): string {
+    return this.configService.get<string>('AWS_SECRET_ACCESS_KEY', '');
+  }
+
+  get s3BucketName(): string {
+    return this.configService.get<string>('S3_BUCKET_NAME', '');
+  }
+
+  get vectorProvider(): string {
+    return this.configService.get<string>('VECTOR_PROVIDER', 'openai');
+  }
+
+  get vectorModel(): string {
+    return this.configService.get<string>(
+      'VECTOR_MODEL',
+      'text-embedding-3-small',
+    );
+  }
+
+  get vectorDatabase(): string {
+    return this.configService.get<string>('VECTOR_DATABASE', 'qdrant');
+  }
+
+  get qdrantDatabaseUrl(): string {
+    return this.configService.get<string>('QDRANT_DATABASE_URL', '');
+  }
+
   get port(): number {
     return this.configService.get<number>('PORT', 3000);
   }
@@ -31,19 +91,6 @@ export class ConfigsService {
 
   get cacheValkeyPort(): number {
     return this.configService.get<number>('CACHE_VALKEY_PORT', 6379);
-  }
-
-  getRequiredConfig(key: string): string {
-    const value = this.configService.get<string>(key);
-    if (!value) {
-      throw new Error(`Required configuration ${key} is not set`);
-    }
-    return value;
-  }
-
-  // Helper method untuk mendapatkan konfigurasi dengan default value
-  getConfigWithDefault<T>(key: string, defaultValue: T): T {
-    return this.configService.get<T>(key, defaultValue);
   }
 
   // Cache configuration getters
