@@ -23,6 +23,8 @@
     "seed:all": "ts-node -r tsconfig-paths/register src/scripts/seed-all.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.891.0",
+    "@aws-sdk/s3-request-presigner": "^3.891.0",
     "@faker-js/faker": "^10.0.0",
     "@langchain/anthropic": "^0.3.28",
     "@langchain/community": "^0.3.56",
@@ -51,21 +53,30 @@
     "@opentelemetry/sdk-node": "^0.205.0",
     "@opentelemetry/sdk-trace-base": "^2.1.0",
     "@prisma/client": "^6.15.0",
+    "@qdrant/js-client-rest": "^1.15.1",
+    "@types/fs-extra": "^11.0.4",
+    "@types/uuid": "^11.0.0",
+    "@types/word-extractor": "^1.0.3",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.58.5",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
+    "fs-extra": "^11.3.2",
     "ioredis": "^5.7.0",
     "langchain": "^0.3.34",
+    "mammoth": "^1.10.0",
     "nestjs-otel": "^7.0.1",
     "nestjs-pino": "^4.4.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
+    "pdf-parse": "^1.1.1",
     "pino-http": "^10.5.0",
     "pino-pretty": "^13.1.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "uuid": "^13.0.0",
+    "word-extractor": "^0.4.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -79,6 +90,7 @@
     "@types/node": "^22.10.7",
     "@types/passport-jwt": "^4.0.1",
     "@types/passport-local": "^1.0.38",
+    "@types/pdf-parse": "^1.1.5",
     "@types/supertest": "^6.0.2",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
@@ -111,17 +123,17 @@
       "**/*.(t|j)s"
     ],
     "coveragePathIgnorePatterns": [
-        "/node_modules/",
-        "/generated/",
-        "module",
-        "main.ts",
-        "tracing.ts",
-        "logs.service.ts",
-        "/scripts/",
-        "/auth/guards/",
-        "/auth/strategies/",
-        "prisma.service"
-      ],
+      "/node_modules/",
+      "/generated/",
+      "module",
+      "main.ts",
+      "tracing.ts",
+      "logs.service.ts",
+      "/scripts/",
+      "/auth/guards/",
+      "/auth/strategies/",
+      "prisma.service"
+    ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
   }
