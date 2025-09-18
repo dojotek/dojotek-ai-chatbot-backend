@@ -23,6 +23,10 @@ import { Prisma } from '../generated/prisma/client';
 import { KnowledgeFilesService } from './knowledge-files.service';
 import { CreateKnowledgeFileDto } from './dto/create-knowledge-file.dto';
 import { UpdateKnowledgeFileDto } from './dto/update-knowledge-file.dto';
+import { AcknowledgeUploadDto } from './dto/acknowledge-upload.dto';
+import { CreateKnowledgeFileResponseDto } from './dto/create-knowledge-file-response.dto';
+import { PlaygroundQueryDto } from './dto/playground-query.dto';
+import { PlaygroundResponseDto } from './dto/playground-response.dto';
 import { KnowledgeFile } from './entities/knowledge-file.entity';
 
 @ApiTags('knowledge-files')
@@ -36,15 +40,16 @@ export class KnowledgeFilesController {
   @ApiOperation({ summary: 'Create a new knowledge file' })
   @ApiResponse({
     status: 201,
-    description: 'The knowledge file has been successfully created.',
-    type: KnowledgeFile,
+    description:
+      'The knowledge file has been successfully created with presigned upload URL.',
+    type: CreateKnowledgeFileResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Knowledge not found.' })
   @ApiResponse({ status: 409, description: 'File already exists.' })
   @ApiResponse({ status: 400, description: 'Bad request.' })
   async create(
     @Body(ValidationPipe) createKnowledgeFileDto: CreateKnowledgeFileDto,
-  ): Promise<KnowledgeFile> {
+  ): Promise<CreateKnowledgeFileResponseDto> {
     try {
       return await this.knowledgeFilesService.create(createKnowledgeFileDto);
     } catch (error) {
@@ -56,6 +61,43 @@ export class KnowledgeFilesController {
       // Handle unexpected errors
       throw new HttpException(
         'An unexpected error occurred while creating knowledge file',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post(':id/acknowledge-upload')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Acknowledge that a file has been uploaded and trigger vectorization',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'File upload acknowledged and vectorization queued.',
+    type: KnowledgeFile,
+  })
+  @ApiResponse({ status: 404, description: 'Knowledge file not found.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid file status for acknowledgment.',
+  })
+  async acknowledgeFileUploaded(
+    @Param('id') id: string,
+    @Body(ValidationPipe) acknowledgeUploadDto: AcknowledgeUploadDto,
+  ): Promise<KnowledgeFile> {
+    try {
+      // Override the ID from the URL parameter
+      acknowledgeUploadDto.id = id;
+      return await this.knowledgeFilesService.acknowledgeFileUploaded(
+        acknowledgeUploadDto,
+      );
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        'An unexpected error occurred while acknowledging file upload',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -219,6 +261,37 @@ export class KnowledgeFilesController {
       }
       throw new HttpException(
         'An unexpected error occurred while deleting knowledge file',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post('playground')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Search for similar document chunks using vector similarity',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully found matching document chunks.',
+    type: PlaygroundResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'Knowledge file not found.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Knowledge file is not processed or not active.',
+  })
+  async playground(
+    @Body(ValidationPipe) playgroundQueryDto: PlaygroundQueryDto,
+  ): Promise<PlaygroundResponseDto> {
+    try {
+      return await this.knowledgeFilesService.playground(playgroundQueryDto);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        'An unexpected error occurred during playground search',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

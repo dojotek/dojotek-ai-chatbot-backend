@@ -4,6 +4,10 @@ import { KnowledgeFilesController } from './knowledge-files.controller';
 import { KnowledgeFilesService } from './knowledge-files.service';
 import { CreateKnowledgeFileDto } from './dto/create-knowledge-file.dto';
 import { UpdateKnowledgeFileDto } from './dto/update-knowledge-file.dto';
+import { AcknowledgeUploadDto } from './dto/acknowledge-upload.dto';
+import { CreateKnowledgeFileResponseDto } from './dto/create-knowledge-file-response.dto';
+import { PlaygroundQueryDto } from './dto/playground-query.dto';
+import { PlaygroundResponseDto } from './dto/playground-response.dto';
 
 describe('KnowledgeFilesController', () => {
   let controller: KnowledgeFilesController;
@@ -33,11 +37,24 @@ describe('KnowledgeFilesController', () => {
   const mockCreateKnowledgeFileDto: CreateKnowledgeFileDto = {
     knowledgeId: 'test-knowledge-uuid',
     fileName: 'test-document.pdf',
-    fileUrl: 'https://storage.example.com/test-document.pdf',
     fileType: 'application/pdf',
     fileSize: 1024000,
     status: 'pending',
-    isActive: true,
+  };
+
+  const mockCreateKnowledgeFileResponseDto: CreateKnowledgeFileResponseDto = {
+    knowledgeFile: mockKnowledgeFile,
+    uploadUrl:
+      'https://s3.amazonaws.com/bucket/knowledge-files/2023-12-25/uuid.pdf?presigned=true',
+    storageKey:
+      'knowledge-files/2023-12-25/01234567-89ab-cdef-0123-456789abcdef.pdf',
+    method: 'PUT',
+    expiresInMinutes: 60,
+  };
+
+  const mockAcknowledgeUploadDto: AcknowledgeUploadDto = {
+    id: 'test-uuid-123',
+    fileSize: 1024000,
   };
 
   const mockUpdateKnowledgeFileDto: UpdateKnowledgeFileDto = {
@@ -47,10 +64,12 @@ describe('KnowledgeFilesController', () => {
 
   const mockKnowledgeFilesService = {
     create: jest.fn(),
+    acknowledgeFileUploaded: jest.fn(),
     findMany: jest.fn(),
     findOne: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    playground: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -76,15 +95,17 @@ describe('KnowledgeFilesController', () => {
   });
 
   describe('create', () => {
-    it('should create a knowledge file successfully', async () => {
-      mockKnowledgeFilesService.create.mockResolvedValue(mockKnowledgeFile);
+    it('should create a knowledge file successfully with presigned URL', async () => {
+      mockKnowledgeFilesService.create.mockResolvedValue(
+        mockCreateKnowledgeFileResponseDto,
+      );
 
       const result = await controller.create(mockCreateKnowledgeFileDto);
 
       expect(mockKnowledgeFilesService.create).toHaveBeenCalledWith(
         mockCreateKnowledgeFileDto,
       );
-      expect(result).toEqual(mockKnowledgeFile);
+      expect(result).toEqual(mockCreateKnowledgeFileResponseDto);
     });
 
     it('should throw HttpException when service throws HttpException', async () => {
@@ -117,6 +138,75 @@ describe('KnowledgeFilesController', () => {
       expect(mockKnowledgeFilesService.create).toHaveBeenCalledWith(
         mockCreateKnowledgeFileDto,
       );
+    });
+  });
+
+  describe('acknowledgeFileUploaded', () => {
+    it('should acknowledge file upload successfully', async () => {
+      mockKnowledgeFilesService.acknowledgeFileUploaded.mockResolvedValue(
+        mockKnowledgeFile,
+      );
+
+      const result = await controller.acknowledgeFileUploaded(
+        'test-uuid-123',
+        mockAcknowledgeUploadDto,
+      );
+
+      expect(
+        mockKnowledgeFilesService.acknowledgeFileUploaded,
+      ).toHaveBeenCalledWith({
+        ...mockAcknowledgeUploadDto,
+        id: 'test-uuid-123', // ID should be overridden from URL parameter
+      });
+      expect(result).toEqual(mockKnowledgeFile);
+    });
+
+    it('should throw HttpException when service throws HttpException', async () => {
+      const httpException = new HttpException(
+        'Knowledge file not found',
+        HttpStatus.NOT_FOUND,
+      );
+      mockKnowledgeFilesService.acknowledgeFileUploaded.mockRejectedValue(
+        httpException,
+      );
+
+      await expect(
+        controller.acknowledgeFileUploaded(
+          'test-uuid-123',
+          mockAcknowledgeUploadDto,
+        ),
+      ).rejects.toThrow(httpException);
+      expect(
+        mockKnowledgeFilesService.acknowledgeFileUploaded,
+      ).toHaveBeenCalledWith({
+        ...mockAcknowledgeUploadDto,
+        id: 'test-uuid-123',
+      });
+    });
+
+    it('should throw HttpException with INTERNAL_SERVER_ERROR when service throws unexpected error', async () => {
+      const unexpectedError = new Error('Queue connection failed');
+      mockKnowledgeFilesService.acknowledgeFileUploaded.mockRejectedValue(
+        unexpectedError,
+      );
+
+      await expect(
+        controller.acknowledgeFileUploaded(
+          'test-uuid-123',
+          mockAcknowledgeUploadDto,
+        ),
+      ).rejects.toThrow(
+        new HttpException(
+          'An unexpected error occurred while acknowledging file upload',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        ),
+      );
+      expect(
+        mockKnowledgeFilesService.acknowledgeFileUploaded,
+      ).toHaveBeenCalledWith({
+        ...mockAcknowledgeUploadDto,
+        id: 'test-uuid-123',
+      });
     });
   });
 
@@ -393,6 +483,90 @@ describe('KnowledgeFilesController', () => {
       expect(mockKnowledgeFilesService.delete).toHaveBeenCalledWith({
         id: 'test-uuid-123',
       });
+    });
+  });
+
+  describe('playground', () => {
+    const mockPlaygroundQueryDto: PlaygroundQueryDto = {
+      query: 'What is machine learning?',
+      knowledgeFileId: 'test-uuid-123',
+    };
+
+    const mockPlaygroundResponse: PlaygroundResponseDto = {
+      fileChunkQuantity: 2,
+      fileChunks: [
+        {
+          content: 'Machine learning is a subset of artificial intelligence...',
+          score: 0.95,
+          metadata: {
+            source: 'test-document.pdf#doc-0-chunk-5',
+            knowledgeFileId: 'test-uuid-123',
+            knowledgeId: 'test-knowledge-uuid',
+            fileName: 'test-document.pdf',
+            fileType: 'application/pdf',
+            chunkIndex: 5,
+            documentIndex: 0,
+          },
+        },
+        {
+          content: 'AI systems can learn and improve from experience...',
+          score: 0.87,
+          metadata: {
+            source: 'test-document.pdf#doc-0-chunk-12',
+            knowledgeFileId: 'test-uuid-123',
+            knowledgeId: 'test-knowledge-uuid',
+            fileName: 'test-document.pdf',
+            fileType: 'application/pdf',
+            chunkIndex: 12,
+            documentIndex: 0,
+          },
+        },
+      ],
+    };
+
+    it('should perform playground search successfully', async () => {
+      mockKnowledgeFilesService.playground.mockResolvedValue(
+        mockPlaygroundResponse,
+      );
+
+      const result = await controller.playground(mockPlaygroundQueryDto);
+
+      expect(mockKnowledgeFilesService.playground).toHaveBeenCalledWith(
+        mockPlaygroundQueryDto,
+      );
+      expect(result).toEqual(mockPlaygroundResponse);
+    });
+
+    it('should throw HttpException when service throws HttpException', async () => {
+      const httpException = new HttpException(
+        'Knowledge file not found',
+        HttpStatus.NOT_FOUND,
+      );
+      mockKnowledgeFilesService.playground.mockRejectedValue(httpException);
+
+      await expect(
+        controller.playground(mockPlaygroundQueryDto),
+      ).rejects.toThrow(httpException);
+      expect(mockKnowledgeFilesService.playground).toHaveBeenCalledWith(
+        mockPlaygroundQueryDto,
+      );
+    });
+
+    it('should throw HttpException with INTERNAL_SERVER_ERROR when service throws unexpected error', async () => {
+      const unexpectedError = new Error('Vector store connection failed');
+      mockKnowledgeFilesService.playground.mockRejectedValue(unexpectedError);
+
+      await expect(
+        controller.playground(mockPlaygroundQueryDto),
+      ).rejects.toThrow(
+        new HttpException(
+          'An unexpected error occurred during playground search',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        ),
+      );
+      expect(mockKnowledgeFilesService.playground).toHaveBeenCalledWith(
+        mockPlaygroundQueryDto,
+      );
     });
   });
 });

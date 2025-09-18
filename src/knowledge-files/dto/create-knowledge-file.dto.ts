@@ -4,8 +4,8 @@ import {
   IsInt,
   IsPositive,
   IsIn,
-  IsUrl,
   IsBoolean,
+  Matches,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -18,25 +18,24 @@ export class CreateKnowledgeFileDto {
   knowledgeId: string;
 
   @ApiProperty({
-    description: 'The name of the file',
+    description:
+      'The name of the file (must have .txt, .doc, .docx, or .pdf extension)',
     example: 'document.pdf',
   })
   @IsString()
-  fileName: string;
-
-  @ApiProperty({
-    description: 'The URL where the file is stored',
-    example: 'https://storage.example.com/files/document.pdf',
+  @Matches(/\.(txt|doc|docx|pdf)$/i, {
+    message: 'File must have a valid extension: .txt, .doc, .docx, or .pdf',
   })
-  @IsUrl()
-  fileUrl: string;
+  fileName: string;
 
   @ApiProperty({
     description: 'The type/format of the file',
     example: 'application/pdf',
+    required: false,
   })
+  @IsOptional()
   @IsString()
-  fileType: string;
+  fileType?: string;
 
   @ApiProperty({
     description: 'The size of the file in bytes',
