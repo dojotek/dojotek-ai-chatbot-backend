@@ -8,7 +8,7 @@ import { LogsService } from '../../logs/logs.service';
 import type { IStorageService } from '../../storage/storage.interface';
 import { STORAGE_SERVICE } from '../../storage/constants';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
-import { QdrantVectorStore } from '@langchain/community/vectorstores/qdrant';
+import { QdrantVectorStore } from '@langchain/qdrant';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { Document } from '@langchain/core/documents';
 import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';

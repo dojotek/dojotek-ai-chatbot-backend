@@ -9,5 +9,6 @@ import { ConfigsModule } from '../configs/configs.module';
   imports: [PrismaModule, CachesModule, ConfigsModule],
   controllers: [ChatAgentKnowledgesController],
   providers: [ChatAgentKnowledgesService],
+  exports: [ChatAgentKnowledgesService],
 })
 export class ChatAgentKnowledgesModule {}

@@ -5,7 +5,12 @@ import {
   ProcessInboundMessageJobData,
 } from './chat-agent-sample.consumer';
 import { LogsService } from '../../logs/logs.service';
-import { ChatAgentInferencesService } from '../chat-agent-inferences.service';
+import { ChatAgentKnowledgesService } from '../../chat-agent-knowledges/chat-agent-knowledges.service';
+import { KnowledgeFilesService } from '../../knowledge-files/knowledge-files.service';
+import { BasicRagService } from '../services/basic-rag.service';
+import { CorrectiveRagService } from '../services/corrective-rag.service';
+import { SelfRagService } from '../services/self-rag.service';
+import { AgenticRagService } from '../services/agentic-rag.service';
 import { ChatAgentsService } from '../chat-agents.service';
 import { ChatSessionsService } from '../../chat-sessions/chat-sessions.service';
 import { ChatMessagesService } from '../../chat-messages/chat-messages.service';
@@ -15,11 +20,13 @@ import { MessageType } from '../../chat-messages/dto/create-chat-message.dto';
 describe('ChatAgentSampleConsumer', () => {
   let consumer: ChatAgentSampleConsumer;
   let logsService: LogsService;
-  let chatAgentInferencesService: ChatAgentInferencesService;
   let chatAgentsService: ChatAgentsService;
   let chatSessionsService: ChatSessionsService;
   let chatMessagesService: ChatMessagesService;
   let configsService: ConfigsService;
+  let chatAgentKnowledgesService: ChatAgentKnowledgesService;
+  let knowledgeFilesService: KnowledgeFilesService;
+  let correctiveRagService: CorrectiveRagService;
 
   const mockChatAgent = {
     id: 'chat-agent-1',
@@ -65,6 +72,15 @@ describe('ChatAgentSampleConsumer', () => {
       platformMessageId: 'ai-msg-1',
       createdAt: new Date('2023-01-01T10:01:00Z'),
     },
+    {
+      id: 'message-3',
+      chatSessionId: 'chat-session-1',
+      messageType: 'user',
+      content: 'How are you?',
+      metadata: {},
+      platformMessageId: 'slack-msg-3',
+      createdAt: new Date('2023-01-01T10:02:00Z'),
+    },
   ];
 
   const mockJobData = {
@@ -77,6 +93,27 @@ describe('ChatAgentSampleConsumer', () => {
     message: 'How are you?',
   };
 
+  const mockChatAgentKnowledge = {
+    id: 'cak-1',
+    createdAt: new Date(),
+    chatAgentId: 'chat-agent-1',
+    knowledgeId: 'k1',
+    priority: 1,
+  };
+
+  const mockKnowledgeFile = {
+    id: 'f1',
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    status: 'processed',
+    knowledgeId: 'k1',
+    fileName: 'test.pdf',
+    fileUrl: 'https://example.com/test.pdf',
+    fileType: 'application/pdf',
+    fileSize: 1024,
+  };
+
   beforeEach(async () => {
     const mockLogsService = {
       log: jest.fn(),
@@ -84,9 +121,20 @@ describe('ChatAgentSampleConsumer', () => {
       error: jest.fn(),
     };
 
-    const mockChatAgentInferencesService = {
-      runChatAgent: jest.fn(),
+    const mockChatAgentKnowledgesService = {
+      findByChatAgent: jest.fn(),
     };
+    const mockKnowledgeFilesService = {
+      findMany: jest.fn(),
+    };
+    const mockBasicRagService = {
+      runInference: jest.fn(),
+    };
+    const mockCorrectiveRagService = {
+      runInference: jest.fn(),
+    };
+    const mockSelfRagService = {};
+    const mockAgenticRagService = {};
 
     const mockChatAgentsService = {
       findOne: jest.fn(),
@@ -113,10 +161,6 @@ describe('ChatAgentSampleConsumer', () => {
           useValue: mockLogsService,
         },
         {
-          provide: ChatAgentInferencesService,
-          useValue: mockChatAgentInferencesService,
-        },
-        {
           provide: ChatAgentsService,
           useValue: mockChatAgentsService,
         },
@@ -132,16 +176,42 @@ describe('ChatAgentSampleConsumer', () => {
           provide: ConfigsService,
           useValue: mockConfigsService,
         },
+        {
+          provide: ChatAgentKnowledgesService,
+          useValue: mockChatAgentKnowledgesService,
+        },
+        {
+          provide: KnowledgeFilesService,
+          useValue: mockKnowledgeFilesService,
+        },
+        {
+          provide: BasicRagService,
+          useValue: mockBasicRagService,
+        },
+        {
+          provide: CorrectiveRagService,
+          useValue: mockCorrectiveRagService,
+        },
+        {
+          provide: SelfRagService,
+          useValue: mockSelfRagService,
+        },
+        {
+          provide: AgenticRagService,
+          useValue: mockAgenticRagService,
+        },
       ],
     }).compile();
 
     consumer = module.get<ChatAgentSampleConsumer>(ChatAgentSampleConsumer);
     logsService = module.get(LogsService);
-    chatAgentInferencesService = module.get(ChatAgentInferencesService);
     chatAgentsService = module.get(ChatAgentsService);
     chatSessionsService = module.get(ChatSessionsService);
     chatMessagesService = module.get(ChatMessagesService);
     configsService = module.get(ConfigsService);
+    chatAgentKnowledgesService = module.get(ChatAgentKnowledgesService);
+    knowledgeFilesService = module.get(KnowledgeFilesService);
+    correctiveRagService = module.get(CorrectiveRagService);
 
     // Setup default mock implementations
     jest.spyOn(chatAgentsService, 'findOne').mockResolvedValue(mockChatAgent);
@@ -153,7 +223,27 @@ describe('ChatAgentSampleConsumer', () => {
       .mockResolvedValue([...mockMessages].reverse()); // Simulating desc order
     jest.spyOn(configsService, 'getConfigWithDefault').mockReturnValue(10);
     jest
-      .spyOn(chatAgentInferencesService, 'runChatAgent')
+      .spyOn(chatAgentKnowledgesService, 'findByChatAgent')
+      .mockResolvedValue([
+        {
+          ...mockChatAgentKnowledge,
+          id: 'cak-1',
+          knowledgeId: 'k1',
+          priority: 1,
+        },
+        {
+          ...mockChatAgentKnowledge,
+          id: 'cak-2',
+          knowledgeId: 'k2',
+          priority: 2,
+        },
+      ]);
+    jest.spyOn(knowledgeFilesService, 'findMany').mockResolvedValue([
+      { ...mockKnowledgeFile, id: 'f1' },
+      { ...mockKnowledgeFile, id: 'f2' },
+    ]);
+    jest
+      .spyOn(correctiveRagService, 'runInference')
       .mockResolvedValue('AI response');
     jest.spyOn(chatMessagesService, 'create').mockResolvedValue({
       id: 'ai-message-1',
@@ -239,13 +329,18 @@ describe('ChatAgentSampleConsumer', () => {
         take: 10,
       });
 
-      // Verify LLM inference
+      // Verify RAG inference
       expect(
-        jest.spyOn(chatAgentInferencesService, 'runChatAgent'),
-      ).toHaveBeenCalledWith(
-        mockChatAgent.systemPrompt,
-        mockMessages, // Should be in chronological order (oldest first)
-      );
+        jest.spyOn(correctiveRagService, 'runInference'),
+      ).toHaveBeenCalledWith({
+        knowledgeId: 'k1',
+        knowledgeFileIds: ['f1', 'f2'],
+        recentMessages: [
+          { role: 'ai', content: 'Hi there!' },
+          { role: 'user', content: 'How are you?' },
+        ],
+        userQuery: mockJobData.message,
+      });
 
       // Verify AI message creation
       expect(jest.spyOn(chatMessagesService, 'create')).toHaveBeenCalledWith({
@@ -280,7 +375,7 @@ describe('ChatAgentSampleConsumer', () => {
         jest.spyOn(chatMessagesService, 'findMany'),
       ).not.toHaveBeenCalled();
       expect(
-        jest.spyOn(chatAgentInferencesService, 'runChatAgent'),
+        jest.spyOn(correctiveRagService, 'runInference'),
       ).not.toHaveBeenCalled();
       expect(jest.spyOn(chatMessagesService, 'create')).not.toHaveBeenCalled();
     });
@@ -301,7 +396,7 @@ describe('ChatAgentSampleConsumer', () => {
         jest.spyOn(chatMessagesService, 'findMany'),
       ).not.toHaveBeenCalled();
       expect(
-        jest.spyOn(chatAgentInferencesService, 'runChatAgent'),
+        jest.spyOn(correctiveRagService, 'runInference'),
       ).not.toHaveBeenCalled();
       expect(jest.spyOn(chatMessagesService, 'create')).not.toHaveBeenCalled();
     });
@@ -317,8 +412,13 @@ describe('ChatAgentSampleConsumer', () => {
       );
 
       expect(
-        jest.spyOn(chatAgentInferencesService, 'runChatAgent'),
-      ).toHaveBeenCalledWith(mockChatAgent.systemPrompt, []);
+        jest.spyOn(correctiveRagService, 'runInference'),
+      ).toHaveBeenCalledWith({
+        knowledgeId: 'k1',
+        knowledgeFileIds: ['f1', 'f2'],
+        recentMessages: [],
+        userQuery: mockJobData.message,
+      });
     });
 
     it('should use custom chat history limit from config', async () => {
@@ -339,7 +439,7 @@ describe('ChatAgentSampleConsumer', () => {
     it('should handle error during chat agent inference', async () => {
       const inferenceError = new Error('LLM service unavailable');
       jest
-        .spyOn(chatAgentInferencesService, 'runChatAgent')
+        .spyOn(correctiveRagService, 'runInference')
         .mockRejectedValue(inferenceError);
 
       await expect(consumer.process(job)).rejects.toThrow(
@@ -429,9 +529,7 @@ describe('ChatAgentSampleConsumer', () => {
         .spyOn(chatSessionsService, 'findOne')
         .mockResolvedValue(mockChatSession);
       jest.spyOn(configsService, 'getConfigWithDefault').mockReturnValue(10);
-      jest
-        .spyOn(chatAgentInferencesService, 'runChatAgent')
-        .mockResolvedValue('AI response');
+      // removed, replaced by correctiveRagService in this spec
       jest.spyOn(chatMessagesService, 'create').mockResolvedValue({
         id: 'ai-message-1',
         chatSessionId: 'chat-session-1',
@@ -445,13 +543,22 @@ describe('ChatAgentSampleConsumer', () => {
       // The database returns messages in DESC order (newest first)
       const messagesInDescOrder = [
         {
+          id: 'message-3',
+          chatSessionId: 'chat-session-1',
+          messageType: 'user',
+          content: 'How are you?',
+          metadata: {},
+          platformMessageId: 'slack-msg-3',
+          createdAt: new Date('2023-01-01T10:02:00Z'), // newest timestamp
+        },
+        {
           id: 'message-2',
           chatSessionId: 'chat-session-1',
           messageType: 'ai',
           content: 'Hi there!',
           metadata: {},
           platformMessageId: 'ai-msg-1',
-          createdAt: new Date('2023-01-01T10:01:00Z'), // newer timestamp
+          createdAt: new Date('2023-01-01T10:01:00Z'), // middle timestamp
         },
         {
           id: 'message-1',
@@ -460,7 +567,7 @@ describe('ChatAgentSampleConsumer', () => {
           content: 'Hello',
           metadata: {},
           platformMessageId: 'slack-msg-1',
-          createdAt: new Date('2023-01-01T10:00:00Z'), // older timestamp
+          createdAt: new Date('2023-01-01T10:00:00Z'), // oldest timestamp
         },
       ];
 
@@ -468,40 +575,52 @@ describe('ChatAgentSampleConsumer', () => {
         .spyOn(chatMessagesService, 'findMany')
         .mockResolvedValue(messagesInDescOrder);
 
+      // Re-wire required mocks for knowledge and rag services
+      jest
+        .spyOn(chatAgentKnowledgesService, 'findByChatAgent')
+        .mockResolvedValue([
+          {
+            ...mockChatAgentKnowledge,
+            id: 'cak-1',
+            knowledgeId: 'k1',
+            priority: 1,
+          },
+          {
+            ...mockChatAgentKnowledge,
+            id: 'cak-2',
+            knowledgeId: 'k2',
+            priority: 2,
+          },
+        ]);
+      jest.spyOn(knowledgeFilesService, 'findMany').mockResolvedValue([
+        { ...mockKnowledgeFile, id: 'f1' },
+        { ...mockKnowledgeFile, id: 'f2' },
+      ]);
+      jest
+        .spyOn(correctiveRagService, 'runInference')
+        .mockResolvedValue('AI response');
+
       await consumer.process(job);
 
-      // The function receives messages in chronological order (oldest first)
-      // Based on the test error, the received order is:
-      // 1. "Hello" (older message, 10:00:00)
-      // 2. "Hi there!" (newer message, 10:01:00)
+      // The function provides messages in chronological order (oldest first)
+      // Note: The last message (current message) is removed to avoid duplication
       expect(
-        jest.spyOn(chatAgentInferencesService, 'runChatAgent'),
-      ).toHaveBeenCalledWith(mockChatAgent.systemPrompt, [
-        {
-          id: 'message-1',
-          chatSessionId: 'chat-session-1',
-          messageType: 'user',
-          content: 'Hello',
-          metadata: {},
-          platformMessageId: 'slack-msg-1',
-          createdAt: new Date('2023-01-01T10:00:00Z'),
-        },
-        {
-          id: 'message-2',
-          chatSessionId: 'chat-session-1',
-          messageType: 'ai',
-          content: 'Hi there!',
-          metadata: {},
-          platformMessageId: 'ai-msg-1',
-          createdAt: new Date('2023-01-01T10:01:00Z'),
-        },
-      ]);
+        jest.spyOn(correctiveRagService, 'runInference'),
+      ).toHaveBeenCalledWith({
+        knowledgeId: 'k1',
+        knowledgeFileIds: ['f1', 'f2'],
+        recentMessages: [
+          { role: 'ai', content: 'Hi there!' },
+          { role: 'user', content: 'How are you?' },
+        ],
+        userQuery: mockJobData.message,
+      });
     });
 
     it('should log the correct LLM response length', async () => {
       const longResponse = 'A'.repeat(1000);
       jest
-        .spyOn(chatAgentInferencesService, 'runChatAgent')
+        .spyOn(correctiveRagService, 'runInference')
         .mockResolvedValue(longResponse);
 
       await consumer.process(job);

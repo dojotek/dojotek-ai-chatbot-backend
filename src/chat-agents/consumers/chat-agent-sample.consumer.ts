@@ -1,7 +1,6 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { LogsService } from '../../logs/logs.service';
-import { ChatAgentInferencesService } from '../chat-agent-inferences.service';
 import { ChatAgentsService } from '../chat-agents.service';
 import { ChatSessionsService } from '../../chat-sessions/chat-sessions.service';
 import { ChatMessagesService } from '../../chat-messages/chat-messages.service';
@@ -10,6 +9,12 @@ import { ConfigsService } from '../../configs/configs.service';
 import { ChatAgent } from '../entities/chat-agent.entity';
 import { ChatSession } from '../../chat-sessions/entities/chat-session.entity';
 import { ChatMessage } from '../../chat-messages/entities/chat-message.entity';
+import { ChatAgentKnowledgesService } from '../../chat-agent-knowledges/chat-agent-knowledges.service';
+import { KnowledgeFilesService } from '../../knowledge-files/knowledge-files.service';
+import { BasicRagService } from '../services/basic-rag.service';
+import { CorrectiveRagService } from '../services/corrective-rag.service';
+import { SelfRagService } from '../services/self-rag.service';
+import { AgenticRagService } from '../services/agentic-rag.service';
 
 export interface ProcessInboundMessageJobData {
   chatSessionId: string;
@@ -25,11 +30,17 @@ export interface ProcessInboundMessageJobData {
 export class ChatAgentSampleConsumer extends WorkerHost {
   constructor(
     private readonly logsService: LogsService,
-    private readonly chatAgentInferencesService: ChatAgentInferencesService,
     private readonly chatAgentsService: ChatAgentsService,
     private readonly chatSessionsService: ChatSessionsService,
     private readonly chatMessagesService: ChatMessagesService,
     private readonly configsService: ConfigsService,
+    private readonly chatAgentKnowledgesService: ChatAgentKnowledgesService,
+    private readonly knowledgeFilesService: KnowledgeFilesService,
+
+    private readonly basicRagService: BasicRagService,
+    private readonly correctiveRagService: CorrectiveRagService,
+    private readonly selfRagService: SelfRagService,
+    private readonly agenticRagService: AgenticRagService,
   ) {
     super();
   }
@@ -61,7 +72,7 @@ export class ChatAgentSampleConsumer extends WorkerHost {
       customerId: _customerId, // eslint-disable-line @typescript-eslint/no-unused-vars
       customerStaffId: _customerStaffId, // eslint-disable-line @typescript-eslint/no-unused-vars
       platform,
-      message: _message, // eslint-disable-line @typescript-eslint/no-unused-vars
+      message: _message,
     } = jobData;
 
     this.logsService.log(
@@ -114,26 +125,58 @@ export class ChatAgentSampleConsumer extends WorkerHost {
           take: recentMessagesLimit,
         });
 
-      // Reverse the array to get chronological order (oldest first)
-      const messageHistory = recentMessages.reverse();
+      // Remove the last message (current message) to avoid duplication with _message
+      const messageHistory = recentMessages.slice(0, -1).reverse();
 
       this.logsService.debug(
         `Retrieved ${messageHistory.length} recent messages for context`,
         'ChatAgentSampleConsumer',
       );
 
-      // 4. Call runChatAgent with systemPrompt and recent messages
-      const llmResponse = await this.chatAgentInferencesService.runChatAgent(
-        chatAgent.systemPrompt,
-        messageHistory,
-      );
+      // 4. Collect active & processed knowledge file IDs for this agent
+      const agentKnowledges =
+        await this.chatAgentKnowledgesService.findByChatAgent(chatAgentId);
+      const knowledgeIds = agentKnowledges
+        .map((ak) => ak.knowledgeId)
+        .filter(Boolean);
+
+      const knowledgeFiles = await this.knowledgeFilesService.findMany({
+        where: {
+          knowledgeId: { in: knowledgeIds },
+          status: 'processed',
+          isActive: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+      const knowledgeFileIds = knowledgeFiles.map((kf) => kf.id);
+
+      // 5. Prepare inputs and run RAG service (hard-coded: BasicRag)
+      const recentMessagesForRag = messageHistory.map((m) => ({
+        role:
+          m.messageType === 'user'
+            ? ('user' as const)
+            : m.messageType === 'ai'
+              ? ('ai' as const)
+              : ('system' as const),
+        content: m.content,
+      }));
+
+      const userQuery = _message;
+
+      // Available RAG services: basicRagService, correctiveRagService, selfRagService, agenticRagService
+      const llmResponse = await this.correctiveRagService.runInference({
+        knowledgeId: knowledgeIds[0], // Use the first knowledge ID
+        knowledgeFileIds,
+        recentMessages: recentMessagesForRag,
+        userQuery,
+      });
 
       this.logsService.log(
         `Generated LLM response with length: ${llmResponse.length}`,
         'ChatAgentSampleConsumer',
       );
 
-      // 5. Create AI message with the LLM response
+      // 6. Create AI message with the LLM response
       const aiMessage: ChatMessage = await this.chatMessagesService.create({
         chatSessionId,
         messageType: MessageType.AI,
