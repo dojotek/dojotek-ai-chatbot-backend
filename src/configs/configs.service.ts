@@ -186,6 +186,20 @@ export class ConfigsService {
     return this.configService.get<number>('CACHE_TTL_CHAT_MESSAGES', 3600);
   }
 
+  get cachePrefixChatAgentKnowledges(): string {
+    return this.configService.get<string>(
+      'CACHE_PREFIX_CHAT_AGENT_KNOWLEDGES',
+      'chat-agent-knowledges',
+    );
+  }
+
+  get cacheTtlChatAgentKnowledges(): number {
+    return this.configService.get<number>(
+      'CACHE_TTL_CHAT_AGENT_KNOWLEDGES',
+      3600,
+    );
+  }
+
   // Inbound chat deduplication TTL getters
   get inboundChatDeduplicationTtlSample(): number {
     return this.configService.get<number>(

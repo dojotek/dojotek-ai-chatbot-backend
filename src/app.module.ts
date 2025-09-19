@@ -10,10 +10,11 @@ import { SeedersModule } from './seeders/seeders.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PrismaModule } from './prisma/prisma.module';
 
+import { PrismaModule } from './prisma/prisma.module';
 import { ConfigsModule } from './configs/configs.module';
 import { ConfigsService } from './configs/configs.service';
+import { StorageModule } from './storage/storage.module';
 
 import { RolesModule } from './roles/roles.module';
 import { UsersModule } from './users/users.module';
@@ -27,7 +28,7 @@ import { CustomerStaffsModule } from './customer-staffs/customer-staffs.module';
 import { ChatAgentsModule } from './chat-agents/chat-agents.module';
 import { ChatSessionsModule } from './chat-sessions/chat-sessions.module';
 import { ChatMessagesModule } from './chat-messages/chat-messages.module';
-import { StorageModule } from './storage/storage.module';
+import { ChatAgentKnowledgesModule } from './chat-agent-knowledges/chat-agent-knowledges.module';
 
 // Function to sanitize sensitive headers
 function sanitizeHeaders(headers: Record<string, any>): Record<string, any> {
@@ -202,6 +203,7 @@ function getHeadersProperty(
     CachesModule,
     LogsModule,
     SeedersModule,
+    StorageModule,
 
     RolesModule,
     UsersModule,
@@ -215,7 +217,7 @@ function getHeadersProperty(
     ChatAgentsModule,
     ChatSessionsModule,
     ChatMessagesModule,
-    StorageModule,
+    ChatAgentKnowledgesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
