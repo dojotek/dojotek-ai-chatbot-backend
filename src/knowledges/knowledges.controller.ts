@@ -73,7 +73,7 @@ export class KnowledgesController {
       where.category = { contains: category, mode: 'insensitive' as const };
     }
 
-    if (isActive !== undefined) {
+    if (isActive === 'true' || isActive === 'false') {
       where.isActive = isActive === 'true';
     }
 
