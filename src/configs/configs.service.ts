@@ -252,4 +252,13 @@ export class ConfigsService {
   get jwtExpiresIn(): string {
     return this.configService.getOrThrow<string>('JWT_EXPIRES_IN', '86400s');
   }
+
+  // Settings cache configuration getters
+  get cachePrefixSettings(): string {
+    return this.configService.get<string>('CACHE_PREFIX_SETTINGS', 'settings');
+  }
+
+  get cacheTtlSettings(): number {
+    return this.configService.get<number>('CACHE_TTL_SETTINGS', 3600);
+  }
 }
