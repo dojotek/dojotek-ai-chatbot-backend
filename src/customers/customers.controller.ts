@@ -74,7 +74,8 @@ export class CustomersController {
       where.industry = { contains: industry, mode: 'insensitive' as const };
     }
 
-    if (isActive !== undefined) {
+    // Only filter by isActive when it's explicitly 'true' or 'false'
+    if (isActive === 'true' || isActive === 'false') {
       where.isActive = isActive === 'true';
     }
 
