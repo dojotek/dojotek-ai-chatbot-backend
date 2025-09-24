@@ -74,7 +74,7 @@ model KnowledgeFile {
   knowledgeId String   @map("knowledge_id") @db.Uuid
   fileName    String   @map("file_name") @db.VarChar(255)
   fileUrl     String   @map("file_url") @db.Text // To store object key in object-storage such as Amazon S3
-  fileType    String   @map("file_type") @db.VarChar(50)
+  fileType    String   @map("file_type") @db.VarChar(255)
   fileSize    Int?     @map("file_size")
   status      String   @default("pending") @db.VarChar(50) // pending, processing, processed, failed
   isActive    Boolean  @default(true) @map("is_active")
