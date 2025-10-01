@@ -1,0 +1,6 @@
+# RAG evaluation samples
+samples:
+  - query: "Does Selamat Hospital provide a sleep study for patients with sleep apnea?"
+    reference: "Yes, Selamat Hospital provides a sleep study for patients with sleep apnea."
+  - query: "What eye surgeries are available at Selamat Hospital for glaucoma and cataracts?"
+    reference: "Selamat Hospital offers cataract surgery using the latest phacoemulsification technology and various surgical techniques for glaucoma to manage high eye pressure."
