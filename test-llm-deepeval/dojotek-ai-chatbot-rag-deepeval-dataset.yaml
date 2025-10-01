@@ -1,0 +1,6 @@
+# RAG evaluation samples
+samples:
+  - query: "Can I get a yellow fever vaccination at Selamat Hospital before traveling abroad?"
+    reference: "Yes, you can get a yellow fever vaccination at Selamat Hospital before traveling abroad."
+  - query: "What preparations are needed before undergoing an endoscopy at Selamat Hospital?"
+    reference: "Before undergoing an endoscopy at Selamat Hospital, you need to fast for 8-12 hours, have a consultation, undergo a full blood test, and provide medical consent."
