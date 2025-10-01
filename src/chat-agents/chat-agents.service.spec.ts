@@ -5,6 +5,13 @@ import { CachesService } from '../caches/caches.service';
 import { ConfigsService } from '../configs/configs.service';
 import { CreateChatAgentDto } from './dto/create-chat-agent.dto';
 import { ChatAgent } from '../generated/prisma/client';
+import { LogsService } from '../logs/logs.service';
+import { ChatSessionsService } from '../chat-sessions/chat-sessions.service';
+import { ChatMessagesService } from '../chat-messages/chat-messages.service';
+import { ChatAgentKnowledgesService } from '../chat-agent-knowledges/chat-agent-knowledges.service';
+import { KnowledgeFilesService } from '../knowledge-files/knowledge-files.service';
+import { CorrectiveRagService } from './services/corrective-rag.service';
+import { PlaygroundRequestDto } from './dto/playground-request.dto';
 
 describe('ChatAgentsService', () => {
   let service: ChatAgentsService;
@@ -40,10 +47,24 @@ describe('ChatAgentsService', () => {
     onModuleDestroy: jest.fn(),
   };
 
+  const getConfigWithDefaultMock = <T>(key: string, defaultValue: T): T =>
+    defaultValue;
   const mockConfigsService = {
     cachePrefixChatAgents: 'chat-agents',
     cacheTtlChatAgents: 3600,
+    getConfigWithDefault: jest.fn(getConfigWithDefaultMock),
   };
+
+  const mockLogsService = {
+    log: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  };
+  const mockChatSessionsService = { findOne: jest.fn() };
+  const mockChatMessagesService = { findMany: jest.fn(), create: jest.fn() };
+  const mockChatAgentKnowledgesService = { findByChatAgent: jest.fn() };
+  const mockKnowledgeFilesService = { findMany: jest.fn() };
+  const mockCorrectiveRagService = { runInference: jest.fn() };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -61,6 +82,15 @@ describe('ChatAgentsService', () => {
           provide: ConfigsService,
           useValue: mockConfigsService,
         },
+        { provide: LogsService, useValue: mockLogsService },
+        { provide: ChatSessionsService, useValue: mockChatSessionsService },
+        { provide: ChatMessagesService, useValue: mockChatMessagesService },
+        {
+          provide: ChatAgentKnowledgesService,
+          useValue: mockChatAgentKnowledgesService,
+        },
+        { provide: KnowledgeFilesService, useValue: mockKnowledgeFilesService },
+        { provide: CorrectiveRagService, useValue: mockCorrectiveRagService },
       ],
     }).compile();
 
@@ -72,6 +102,35 @@ describe('ChatAgentsService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('playground', () => {
+    it('runs inference and creates AI message', async () => {
+      mockPrismaService.chatAgent.findUnique.mockResolvedValue(mockChatAgent);
+      mockChatSessionsService.findOne.mockResolvedValue({ id: 'sess1' });
+      mockChatMessagesService.findMany.mockResolvedValue([
+        { content: 'hi', messageType: 'user' },
+        { content: 'ok', messageType: 'ai' },
+        { content: 'current', messageType: 'user' },
+      ]);
+      mockChatAgentKnowledgesService.findByChatAgent.mockResolvedValue([
+        { knowledgeId: 'k1' },
+      ]);
+      mockKnowledgeFilesService.findMany.mockResolvedValue([{ id: 'kf1' }]);
+      mockCorrectiveRagService.runInference.mockResolvedValue('answer text');
+      mockChatMessagesService.create.mockResolvedValue({ id: 'ai1' });
+
+      const req: PlaygroundRequestDto = {
+        chatAgentId: 'test-uuid-123',
+        query: 'hello',
+      };
+
+      const result = await service.playground(req);
+
+      expect(result).toEqual({ answer: 'answer text' });
+      expect(mockCorrectiveRagService.runInference).toHaveBeenCalled();
+      expect(mockChatMessagesService.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('findOne', () => {

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { ChatAgentsController } from './chat-agents.controller';
 import { ChatAgentsService } from './chat-agents.service';
+import { PlaygroundRequestDto } from './dto/playground-request.dto';
 import { CreateChatAgentDto } from './dto/create-chat-agent.dto';
 import { UpdateChatAgentDto } from './dto/update-chat-agent.dto';
 
@@ -42,6 +43,7 @@ describe('ChatAgentsController', () => {
     findOne: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    playground: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -326,6 +328,33 @@ describe('ChatAgentsController', () => {
       expect(mockChatAgentsService.delete).toHaveBeenCalledWith({
         id: '1',
       });
+    });
+  });
+
+  describe('playground', () => {
+    it('should return playground response', async () => {
+      mockChatAgentsService.playground.mockResolvedValue({
+        answer: 'ok',
+        aiMessageId: 'ai1',
+      });
+
+      const body: PlaygroundRequestDto = {
+        chatAgentId: 'a1',
+        query: 'hi',
+      };
+
+      const result = await controller.playground(body);
+      expect(result).toEqual({ answer: 'ok', aiMessageId: 'ai1' });
+      expect(mockChatAgentsService.playground).toHaveBeenCalledWith(body);
+    });
+
+    it('should throw HttpException when service throws unexpected error', async () => {
+      mockChatAgentsService.playground.mockRejectedValue(new Error('x'));
+      const body: PlaygroundRequestDto = {
+        chatAgentId: 'a1',
+        query: 'hi',
+      };
+      await expect(controller.playground(body)).rejects.toThrow(HttpException);
     });
   });
 });

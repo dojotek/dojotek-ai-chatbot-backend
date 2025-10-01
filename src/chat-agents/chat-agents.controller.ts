@@ -22,6 +22,8 @@ import {
 import { ChatAgentsService } from './chat-agents.service';
 import { CreateChatAgentDto } from './dto/create-chat-agent.dto';
 import { UpdateChatAgentDto } from './dto/update-chat-agent.dto';
+import { PlaygroundRequestDto } from './dto/playground-request.dto';
+import { PlaygroundResponseDto } from './dto/playground-response.dto';
 import { ChatAgent } from './entities/chat-agent.entity';
 import { Prisma } from '../generated/prisma/client';
 
@@ -191,6 +193,26 @@ export class ChatAgentsController {
       }
       throw new HttpException(
         'An unexpected error occurred while deleting chat agent',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post('playground')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Run playground inference same as sample consumer' })
+  @ApiResponse({ status: 200, description: 'AI response and message id' })
+  async playground(
+    @Body(ValidationPipe) body: PlaygroundRequestDto,
+  ): Promise<PlaygroundResponseDto> {
+    try {
+      return await this.chatAgentsService.playground(body);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        'An unexpected error occurred while running playground',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

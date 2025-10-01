@@ -9,6 +9,14 @@ import { CreateChatAgentDto } from './dto/create-chat-agent.dto';
 import { UpdateChatAgentDto } from './dto/update-chat-agent.dto';
 import { CachesService } from '../caches/caches.service';
 import { ConfigsService } from '../configs/configs.service';
+import { LogsService } from '../logs/logs.service';
+import { ChatSessionsService } from '../chat-sessions/chat-sessions.service';
+import { ChatMessagesService } from '../chat-messages/chat-messages.service';
+import { ChatAgentKnowledgesService } from '../chat-agent-knowledges/chat-agent-knowledges.service';
+import { KnowledgeFilesService } from '../knowledge-files/knowledge-files.service';
+import { CorrectiveRagService } from './services/corrective-rag.service';
+import { PlaygroundRequestDto } from './dto/playground-request.dto';
+import { PlaygroundResponseDto } from './dto/playground-response.dto';
 
 interface PrismaError {
   code: string;
@@ -30,6 +38,12 @@ export class ChatAgentsService {
     private prisma: PrismaService,
     private cachesService: CachesService,
     private configsService: ConfigsService,
+    private logsService: LogsService,
+    private chatSessionsService: ChatSessionsService,
+    private chatMessagesService: ChatMessagesService,
+    private chatAgentKnowledgesService: ChatAgentKnowledgesService,
+    private knowledgeFilesService: KnowledgeFilesService,
+    private correctiveRagService: CorrectiveRagService,
   ) {}
 
   async findOne(
@@ -262,5 +276,47 @@ export class ChatAgentsService {
     await Promise.all(
       cacheKeysToDelete.map((key) => this.cachesService.del(key)),
     );
+  }
+
+  async playground(
+    request: PlaygroundRequestDto,
+  ): Promise<PlaygroundResponseDto> {
+    const { chatAgentId, query: userQuery } = request;
+
+    this.logsService.log(
+      `Playground inference for agent: ${chatAgentId}`,
+      'ChatAgentsService',
+    );
+
+    // 1. Get chat agent
+    const chatAgent = await this.findOne({ id: chatAgentId });
+    if (!chatAgent) {
+      throw new InternalServerErrorException('Chat agent not found');
+    }
+
+    // 4. Collect knowledge file IDs
+    const agentKnowledges =
+      await this.chatAgentKnowledgesService.findByChatAgent(chatAgentId);
+    const knowledgeIds = agentKnowledges
+      .map((ak) => ak.knowledgeId)
+      .filter(Boolean);
+    const knowledgeFiles = await this.knowledgeFilesService.findMany({
+      where: {
+        knowledgeId: { in: knowledgeIds },
+        status: 'processed',
+        isActive: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    const knowledgeFileIds = knowledgeFiles.map((kf) => kf.id);
+
+    const llmResponse = await this.correctiveRagService.runInference({
+      knowledgeId: knowledgeIds[0],
+      knowledgeFileIds,
+      recentMessages: [],
+      userQuery,
+    });
+
+    return { answer: llmResponse };
   }
 }
