@@ -205,3 +205,14 @@ model ChatMessage {
   @@index([chatSessionId, createdAt])
   @@map("chat_messages")
 }
+
+model ModelProviderSecret {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  name      String   @db.VarChar(255)
+  type      String   @db.VarChar(100)
+  secretStoragePointer String? @map("secret_storage_pointer") @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  @@map("model_provider_secrets")
+}

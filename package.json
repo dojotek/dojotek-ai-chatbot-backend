@@ -26,6 +26,7 @@
     "@aws-sdk/client-s3": "^3.891.0",
     "@aws-sdk/s3-request-presigner": "^3.891.0",
     "@faker-js/faker": "^10.0.0",
+    "@infisical/sdk": "^4.0.6",
     "@langchain/anthropic": "^0.3.28",
     "@langchain/community": "^0.3.56",
     "@langchain/core": "^0.3.76",

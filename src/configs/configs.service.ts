@@ -261,4 +261,36 @@ export class ConfigsService {
   get cacheTtlSettings(): number {
     return this.configService.get<number>('CACHE_TTL_SETTINGS', 3600);
   }
+
+  // Infisical configuration getters
+  get infisicalSiteUrl(): string {
+    return this.configService.get<string>(
+      'INFISICAL_SITE_URL',
+      'https://app.infisical.com',
+    );
+  }
+
+  get infisicalClientId(): string {
+    return this.configService.get<string>('INFISICAL_CLIENT_ID', '');
+  }
+
+  get infisicalClientSecret(): string {
+    return this.configService.get<string>('INFISICAL_CLIENT_SECRET', '');
+  }
+
+  get infisicalEnvironment(): string {
+    return this.configService.get<string>('INFISICAL_ENVIRONMENT', 'dev');
+  }
+
+  get infisicalProjectId(): string {
+    return this.configService.get<string>('INFISICAL_PROJECT_ID', '');
+  }
+
+  // Default path for model provider secrets in Infisical
+  get infisicalModelProviderSecretsPath(): string {
+    return this.configService.get<string>(
+      'INFISICAL_MODEL_PROVIDER_SECRETS_PATH',
+      '/MODEL_PROVIDER_SECRETS',
+    );
+  }
 }
