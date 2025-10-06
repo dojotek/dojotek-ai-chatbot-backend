@@ -11,6 +11,8 @@ import { ConfigsService } from '../configs/configs.service';
 import { CreateKnowledgeDto } from './dto/create-knowledge.dto';
 import { UpdateKnowledgeDto } from './dto/update-knowledge.dto';
 import { Knowledge } from '../generated/prisma/client';
+import { PlaygroundQueryDto } from './dto/playground-query.dto';
+import * as qdrantModule from '@langchain/community/vectorstores/qdrant';
 
 describe('KnowledgesService', () => {
   let service: KnowledgesService;
@@ -46,6 +48,9 @@ describe('KnowledgesService', () => {
   const mockConfigsService = {
     cachePrefixKnowledges: 'knowledges',
     cacheTtlKnowledges: 3600,
+    qdrantDatabaseUrl: 'http://localhost:6333',
+    openaiApiKey: 'test-api-key',
+    vectorModel: 'text-embedding-3-small',
   };
 
   beforeEach(async () => {
@@ -163,6 +168,92 @@ describe('KnowledgesService', () => {
 
       expect(result).toEqual(knowledges);
       expect(mockPrismaService.knowledge.findMany).toHaveBeenCalledWith(params);
+    });
+  });
+
+  describe('playground', () => {
+    const knowledgeId = 'test-knowledge-uuid-123';
+    const baseDto: PlaygroundQueryDto = {
+      query: 'What is machine learning?',
+      knowledgeFileIds: [],
+    };
+
+    beforeEach(() => {
+      // mock prisma findUnique for knowledge validation
+      mockPrismaService.knowledge.findUnique = jest.fn();
+    });
+
+    it('should throw NotFoundException if knowledge not found', async () => {
+      mockPrismaService.knowledge.findUnique.mockResolvedValue(null);
+
+      await expect(service.playground(knowledgeId, baseDto)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw ConflictException if knowledge inactive', async () => {
+      mockPrismaService.knowledge.findUnique.mockResolvedValue({
+        ...mockKnowledge,
+        isActive: false,
+      });
+
+      await expect(service.playground(knowledgeId, baseDto)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('should return chunks using vector search across all files when no file ids provided', async () => {
+      mockPrismaService.knowledge.findUnique.mockResolvedValue(mockKnowledge);
+
+      // Spy on vector store usage by mocking method on prototype
+      const similaritySpy = jest
+        .spyOn(qdrantModule, 'QdrantVectorStore')
+        .mockImplementation(
+          () =>
+            ({
+              similaritySearchWithScore: jest
+                .fn()
+                .mockResolvedValue([
+                  [{ pageContent: 'chunk content', metadata: { a: 1 } }, 0.9],
+                ]),
+            }) as unknown as InstanceType<
+              typeof qdrantModule.QdrantVectorStore
+            >,
+        );
+
+      const result = await service.playground(knowledgeId, baseDto);
+
+      expect(result.fileChunkQuantity).toBe(1);
+      expect(result.fileChunks[0].content).toBe('chunk content');
+      expect(result.fileChunks[0].score).toBe(0.9);
+      expect(similaritySpy).toHaveBeenCalled();
+    });
+
+    it('should filter by knowledgeFileIds when provided', async () => {
+      mockPrismaService.knowledge.findUnique.mockResolvedValue(mockKnowledge);
+      const dto: PlaygroundQueryDto = {
+        query: 'What is ML?',
+        knowledgeFileIds: ['id-1', 'id-2'],
+      };
+
+      const mockSimilarity = jest.fn().mockResolvedValue([]);
+      jest.spyOn(qdrantModule, 'QdrantVectorStore').mockImplementation(
+        () =>
+          ({
+            similaritySearchWithScore: mockSimilarity,
+          }) as unknown as InstanceType<typeof qdrantModule.QdrantVectorStore>,
+      );
+
+      await service.playground(knowledgeId, dto);
+
+      expect(mockSimilarity).toHaveBeenCalledWith(dto.query, 3, {
+        must: [
+          {
+            key: 'metadata.knowledgeFileId',
+            match: { any: dto.knowledgeFileIds },
+          },
+        ],
+      });
     });
   });
 

@@ -9,6 +9,7 @@ import { KnowledgesService } from './knowledges.service';
 import { CreateKnowledgeDto } from './dto/create-knowledge.dto';
 import { UpdateKnowledgeDto } from './dto/update-knowledge.dto';
 import { Knowledge } from './entities/knowledge.entity';
+import { PlaygroundQueryDto } from './dto/playground-query.dto';
 
 describe('KnowledgesController', () => {
   let controller: KnowledgesController;
@@ -40,6 +41,7 @@ describe('KnowledgesController', () => {
     findOne: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    playground: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -351,6 +353,43 @@ describe('KnowledgesController', () => {
       expect(mockKnowledgesService.delete).toHaveBeenCalledWith({
         id: '01234567-89ab-cdef-0123-456789abcdef',
       });
+    });
+  });
+
+  describe('playground', () => {
+    it('should call service and return playground response', async () => {
+      const dto: PlaygroundQueryDto = {
+        query: 'What is machine learning?',
+        knowledgeFileIds: [],
+      };
+      const response = {
+        fileChunkQuantity: 1,
+        fileChunks: [
+          { content: 'chunk', score: 0.9, metadata: { file: 'a.pdf' } },
+        ],
+      };
+      mockKnowledgesService.playground.mockResolvedValue(response);
+
+      const result = await controller.playground(
+        '01234567-89ab-cdef-0123-456789abcdef',
+        dto,
+      );
+
+      expect(mockKnowledgesService.playground).toHaveBeenCalledWith(
+        '01234567-89ab-cdef-0123-456789abcdef',
+        dto,
+      );
+      expect(result).toEqual(response);
+    });
+
+    it('should surface errors from service', async () => {
+      const dto: PlaygroundQueryDto = { query: 'q', knowledgeFileIds: [] };
+      const error = new NotFoundException('Knowledge not found');
+      mockKnowledgesService.playground.mockRejectedValue(error);
+
+      await expect(controller.playground('non-existent', dto)).rejects.toThrow(
+        error,
+      );
     });
   });
 });

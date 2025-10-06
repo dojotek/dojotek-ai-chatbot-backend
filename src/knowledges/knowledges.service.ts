@@ -10,6 +10,13 @@ import { CreateKnowledgeDto } from './dto/create-knowledge.dto';
 import { UpdateKnowledgeDto } from './dto/update-knowledge.dto';
 import { CachesService } from '../caches/caches.service';
 import { ConfigsService } from '../configs/configs.service';
+import { PlaygroundQueryDto } from './dto/playground-query.dto';
+import {
+  PlaygroundResponseDto,
+  FileChunkDto,
+} from './dto/playground-response.dto';
+import { QdrantVectorStore } from '@langchain/community/vectorstores/qdrant';
+import { OpenAIEmbeddings } from '@langchain/openai';
 
 interface PrismaError {
   code: string;
@@ -217,6 +224,69 @@ export class KnowledgesService {
       // Re-throw other errors
       throw error;
     }
+  }
+
+  async playground(
+    knowledgeId: string,
+    playgroundQueryDto: PlaygroundQueryDto,
+  ): Promise<PlaygroundResponseDto> {
+    // Validate knowledge exists and active
+    const knowledge = await this.prisma.knowledge.findUnique({
+      where: { id: knowledgeId },
+    });
+    if (!knowledge) {
+      throw new NotFoundException('Knowledge not found');
+    }
+    if (!knowledge.isActive) {
+      throw new ConflictException('Knowledge is not active');
+    }
+
+    // Initialize embeddings
+    const embeddings = new OpenAIEmbeddings({
+      openAIApiKey: this.configsService.openaiApiKey,
+      modelName: this.configsService.vectorModel,
+    });
+
+    // Qdrant collection for this knowledge
+    const collectionName = `knowledge_${knowledgeId.replace(/-/g, '_')}`;
+    const vectorStore = new QdrantVectorStore(embeddings, {
+      url: this.configsService.qdrantDatabaseUrl,
+      collectionName,
+    });
+
+    // Build filter: if knowledgeFileIds provided and non-empty, filter by them, else search across all files for this knowledge
+    const hasSpecificFiles =
+      Array.isArray(playgroundQueryDto.knowledgeFileIds) &&
+      playgroundQueryDto.knowledgeFileIds.length > 0;
+
+    const filter = hasSpecificFiles
+      ? {
+          must: [
+            {
+              key: 'metadata.knowledgeFileId',
+              match: { any: playgroundQueryDto.knowledgeFileIds },
+            },
+          ],
+        }
+      : undefined;
+
+    // Perform similarity search
+    const results = await vectorStore.similaritySearchWithScore(
+      playgroundQueryDto.query,
+      3,
+      filter,
+    );
+
+    const fileChunks: FileChunkDto[] = results.map(([doc, score]) => ({
+      content: doc.pageContent,
+      score,
+      metadata: doc.metadata,
+    }));
+
+    return {
+      fileChunkQuantity: fileChunks.length,
+      fileChunks,
+    };
   }
 
   /**

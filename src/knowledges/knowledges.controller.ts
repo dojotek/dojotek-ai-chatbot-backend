@@ -130,4 +130,23 @@ export class KnowledgesController {
   async remove(@Param('id') id: string): Promise<void> {
     await this.knowledgesService.delete({ id });
   }
+
+  @Post(':id/playground')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Search for similar document chunks within a knowledge using vector similarity',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully found matching document chunks.',
+    type: Knowledge,
+  })
+  async playground(
+    @Param('id') knowledgeId: string,
+    @Body(ValidationPipe)
+    playgroundQueryDto: import('./dto/playground-query.dto').PlaygroundQueryDto,
+  ): Promise<import('./dto/playground-response.dto').PlaygroundResponseDto> {
+    return this.knowledgesService.playground(knowledgeId, playgroundQueryDto);
+  }
 }
