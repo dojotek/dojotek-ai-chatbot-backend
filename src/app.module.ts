@@ -32,6 +32,7 @@ import { ChatAgentKnowledgesModule } from './chat-agent-knowledges/chat-agent-kn
 import { VectorStorageModule } from './vector-storage/vector-storage.module';
 import { SettingsModule } from './settings/settings.module';
 import { ModelProviderSecretsModule } from './model-provider-secrets/model-provider-secrets.module';
+import { ChannelsModule } from './channels/channels.module';
 
 // Function to sanitize sensitive headers
 function sanitizeHeaders(headers: Record<string, any>): Record<string, any> {
@@ -224,6 +225,7 @@ function getHeadersProperty(
     VectorStorageModule,
     SettingsModule,
     ModelProviderSecretsModule,
+    ChannelsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

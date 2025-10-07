@@ -153,8 +153,26 @@ model ChatAgent {
   customer   Customer               @relation(fields: [customerId], references: [id], onDelete: Cascade)
   knowledges ChatAgentKnowledge[]
   sessions   ChatSession[]
+  channels   Channel[]
 
   @@map("chat_agents")
+}
+
+model Channel {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  chatAgentId String   @map("chat_agent_id") @db.Uuid
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  platform    String   @db.VarChar(50) // lark, discord, slack, teams, telegram, whatsapp
+  workspaceId String   @map("workspace_id") @db.VarChar(255)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  chatAgent ChatAgent @relation(fields: [chatAgentId], references: [id], onDelete: Cascade)
+
+  @@unique([chatAgentId, platform, workspaceId])
+  @@map("channels")
 }
 
 model ChatAgentKnowledge {
