@@ -33,6 +33,7 @@ import { VectorStorageModule } from './vector-storage/vector-storage.module';
 import { SettingsModule } from './settings/settings.module';
 import { ModelProviderSecretsModule } from './model-provider-secrets/model-provider-secrets.module';
 import { ChannelsModule } from './channels/channels.module';
+import { CustomerStaffIdentitiesModule } from './customer-staff-identities/customer-staff-identities.module';
 
 // Function to sanitize sensitive headers
 function sanitizeHeaders(headers: Record<string, any>): Record<string, any> {
@@ -226,6 +227,7 @@ function getHeadersProperty(
     SettingsModule,
     ModelProviderSecretsModule,
     ChannelsModule,
+    CustomerStaffIdentitiesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
