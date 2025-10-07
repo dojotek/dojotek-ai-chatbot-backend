@@ -15,7 +15,7 @@ export class CreateModelProviderSecretDto {
     description:
       'The provider/type of the secret (e.g., openai, anthropic, gemini, openrouter)',
     maxLength: 100,
-    examples: ['openai', 'anthropic', 'gemini', 'openrouter'],
+    example: 'openai',
   })
   @IsString()
   @IsNotEmpty()
