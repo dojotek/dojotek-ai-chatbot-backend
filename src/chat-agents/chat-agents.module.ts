@@ -15,6 +15,7 @@ import { BasicRagService } from './services/basic-rag.service';
 import { CorrectiveRagService } from './services/corrective-rag.service';
 import { SelfRagService } from './services/self-rag.service';
 import { AgenticRagService } from './services/agentic-rag.service';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AgenticRagService } from './services/agentic-rag.service';
     VectorStorageModule,
     ChatAgentKnowledgesModule,
     KnowledgeFilesModule,
+    BullModule.registerQueue({ name: 'outbounds-from-chat-agents' }),
   ],
   controllers: [ChatAgentsController],
   providers: [

@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Job } from 'bullmq';
+import { getQueueToken } from '@nestjs/bullmq';
 import {
   ChatAgentConsumer,
   ProcessInboundMessageJobData,
@@ -27,6 +28,7 @@ describe('ChatAgentConsumer', () => {
   let chatAgentKnowledgesService: ChatAgentKnowledgesService;
   let knowledgeFilesService: KnowledgeFilesService;
   let correctiveRagService: CorrectiveRagService;
+  let mockOutboundsQueue: { add: jest.Mock };
 
   const mockChatAgent = {
     id: 'chat-agent-1',
@@ -136,6 +138,10 @@ describe('ChatAgentConsumer', () => {
     const mockSelfRagService = {};
     const mockAgenticRagService = {};
 
+    mockOutboundsQueue = {
+      add: jest.fn(),
+    };
+
     const mockChatAgentsService = {
       findOne: jest.fn(),
     };
@@ -199,6 +205,10 @@ describe('ChatAgentConsumer', () => {
         {
           provide: AgenticRagService,
           useValue: mockAgenticRagService,
+        },
+        {
+          provide: getQueueToken('outbounds-from-chat-agents'),
+          useValue: mockOutboundsQueue,
         },
       ],
     }).compile();
@@ -356,6 +366,11 @@ describe('ChatAgentConsumer', () => {
         'Generated LLM response with length: 11',
         'ChatAgentSampleConsumer',
       );
+
+      // Verify outbound job enqueued
+      expect(mockOutboundsQueue.add).toHaveBeenCalledWith('send-message', {
+        chatMessageId: 'ai-message-1',
+      });
     });
 
     it('should handle chat agent not found', async () => {

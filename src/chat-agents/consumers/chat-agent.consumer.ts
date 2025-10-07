@@ -1,4 +1,5 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { Job } from 'bullmq';
 import { LogsService } from '../../logs/logs.service';
 import { ChatAgentsService } from '../chat-agents.service';
@@ -41,6 +42,8 @@ export class ChatAgentConsumer extends WorkerHost {
     private readonly correctiveRagService: CorrectiveRagService,
     private readonly selfRagService: SelfRagService,
     private readonly agenticRagService: AgenticRagService,
+    @InjectQueue('outbounds-from-chat-agents')
+    private readonly outboundsQueue: Queue,
   ) {
     super();
   }
@@ -188,6 +191,11 @@ export class ChatAgentConsumer extends WorkerHost {
         `Created AI message with ID: ${aiMessage.id}`,
         'ChatAgentSampleConsumer',
       );
+
+      // 7. Enqueue outbound job to deliver the AI message to channel
+      await this.outboundsQueue.add('send-message', {
+        chatMessageId: aiMessage.id,
+      });
     } catch (error) {
       this.logsService.error(
         'Failed to process inbound message',

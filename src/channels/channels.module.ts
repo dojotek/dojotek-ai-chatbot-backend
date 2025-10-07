@@ -9,5 +9,6 @@ import { ConfigsModule } from '../configs/configs.module';
   imports: [PrismaModule, CachesModule, ConfigsModule],
   controllers: [ChannelsController],
   providers: [ChannelsService],
+  exports: [ChannelsService],
 })
 export class ChannelsModule {}
