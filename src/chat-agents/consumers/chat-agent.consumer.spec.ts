@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Job } from 'bullmq';
 import {
-  ChatAgentSampleConsumer,
+  ChatAgentConsumer,
   ProcessInboundMessageJobData,
-} from './chat-agent-sample.consumer';
+} from './chat-agent.consumer';
 import { LogsService } from '../../logs/logs.service';
 import { ChatAgentKnowledgesService } from '../../chat-agent-knowledges/chat-agent-knowledges.service';
 import { KnowledgeFilesService } from '../../knowledge-files/knowledge-files.service';
@@ -17,8 +17,8 @@ import { ChatMessagesService } from '../../chat-messages/chat-messages.service';
 import { ConfigsService } from '../../configs/configs.service';
 import { MessageType } from '../../chat-messages/dto/create-chat-message.dto';
 
-describe('ChatAgentSampleConsumer', () => {
-  let consumer: ChatAgentSampleConsumer;
+describe('ChatAgentConsumer', () => {
+  let consumer: ChatAgentConsumer;
   let logsService: LogsService;
   let chatAgentsService: ChatAgentsService;
   let chatSessionsService: ChatSessionsService;
@@ -155,7 +155,7 @@ describe('ChatAgentSampleConsumer', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        ChatAgentSampleConsumer,
+        ChatAgentConsumer,
         {
           provide: LogsService,
           useValue: mockLogsService,
@@ -203,7 +203,7 @@ describe('ChatAgentSampleConsumer', () => {
       ],
     }).compile();
 
-    consumer = module.get<ChatAgentSampleConsumer>(ChatAgentSampleConsumer);
+    consumer = module.get<ChatAgentConsumer>(ChatAgentConsumer);
     logsService = module.get(LogsService);
     chatAgentsService = module.get(ChatAgentsService);
     chatSessionsService = module.get(ChatSessionsService);

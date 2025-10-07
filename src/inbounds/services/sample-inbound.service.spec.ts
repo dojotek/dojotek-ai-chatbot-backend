@@ -16,7 +16,6 @@ import { SubmitDto } from '../dto/submit.dto';
 describe('SampleInboundService', () => {
   let service: SampleInboundService;
   let mockQueue: jest.Mocked<Queue>;
-  let mockNewQueue: jest.Mocked<Queue>;
   let mockCachesService: jest.Mocked<CachesService>;
   let mockLogsService: jest.Mocked<LogsService>;
   let mockChatSessionsService: jest.Mocked<ChatSessionsService>;
@@ -100,62 +99,12 @@ describe('SampleInboundService', () => {
       getPaused: jest.fn(),
       isPaused: jest.fn(),
       isRunning: jest.fn(),
-      name: 'INBOUNDS/SAMPLE_INBOUND/v2025.09.05',
+      name: 'inbounds-for-chat-agents',
       obliterate: jest.fn(),
       on: jest.fn(),
       off: jest.fn(),
       once: jest.fn(),
       pause: jest.fn(),
-      removeAllListeners: jest.fn(),
-      removeListener: jest.fn(),
-      removeRepeatable: jest.fn(),
-      removeRepeatableByKey: jest.fn(),
-      resume: jest.fn(),
-      trim: jest.fn(),
-      updateDelay: jest.fn(),
-      updateRepeatable: jest.fn(),
-      waitUntilReady: jest.fn(),
-    } as unknown as jest.Mocked<Queue>;
-
-    // Create a second mock queue for the new queue
-    mockNewQueue = {
-      add: jest.fn(),
-      addBulk: jest.fn(),
-      addJob: jest.fn(),
-      addRepeatable: jest.fn(),
-      addRepeatableByKey: jest.fn(),
-      clean: jest.fn(),
-      close: jest.fn(),
-      count: jest.fn(),
-      drain: jest.fn(),
-      duplicate: jest.fn(),
-      emit: jest.fn(),
-      eventNames: jest.fn(),
-      getActiveCount: jest.fn(),
-      getCompletedCount: jest.fn(),
-      getDelayedCount: jest.fn(),
-      getFailedCount: jest.fn(),
-      getJob: jest.fn(),
-      getJobCounts: jest.fn(),
-      getJobs: jest.fn(),
-      getMaxListeners: jest.fn(),
-      getName: jest.fn(),
-      getQueueEvents: jest.fn(),
-      getRepeatableJobs: jest.fn(),
-      getWaitingChildrenCount: jest.fn(),
-      getWaitingCount: jest.fn(),
-      getWorker: jest.fn(),
-      isPaused: jest.fn(),
-      listenerCount: jest.fn(),
-      listeners: jest.fn(),
-      obliterate: jest.fn(),
-      off: jest.fn(),
-      on: jest.fn(),
-      once: jest.fn(),
-      pause: jest.fn(),
-      prependListener: jest.fn(),
-      prependOnceListener: jest.fn(),
-      rawListeners: jest.fn(),
       removeAllListeners: jest.fn(),
       removeListener: jest.fn(),
       removeRepeatable: jest.fn(),
@@ -207,12 +156,8 @@ describe('SampleInboundService', () => {
           useValue: mockCustomerStaffsService,
         },
         {
-          provide: getQueueToken('inbounds/sample/v2025.09.05'),
+          provide: getQueueToken('inbounds-for-chat-agents'),
           useValue: mockQueue,
-        },
-        {
-          provide: getQueueToken('inbounds/sample'),
-          useValue: mockNewQueue,
         },
       ],
     }).compile();
@@ -810,7 +755,7 @@ describe('SampleInboundService', () => {
         metadata: {},
         platformMessageId: null,
       });
-      mockNewQueue.add.mockResolvedValue({} as Job);
+      mockQueue.add.mockResolvedValue({} as Job);
 
       // Act
       const result = await service.submit(validSubmitDto);

@@ -26,8 +26,8 @@ export interface ProcessInboundMessageJobData {
   message: string;
 }
 
-@Processor('inbounds/sample')
-export class ChatAgentSampleConsumer extends WorkerHost {
+@Processor('inbounds-for-chat-agents')
+export class ChatAgentConsumer extends WorkerHost {
   constructor(
     private readonly logsService: LogsService,
     private readonly chatAgentsService: ChatAgentsService,

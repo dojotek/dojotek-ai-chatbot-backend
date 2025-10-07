@@ -7,7 +7,7 @@ import { ConfigsModule } from '../configs/configs.module';
 import { LogsModule } from '../logs/logs.module';
 import { ChatSessionsModule } from '../chat-sessions/chat-sessions.module';
 import { ChatMessagesModule } from '../chat-messages/chat-messages.module';
-import { ChatAgentSampleConsumer } from './consumers/chat-agent-sample.consumer';
+import { ChatAgentConsumer } from './consumers/chat-agent.consumer';
 import { VectorStorageModule } from '../vector-storage/vector-storage.module';
 import { ChatAgentKnowledgesModule } from '../chat-agent-knowledges/chat-agent-knowledges.module';
 import { KnowledgeFilesModule } from '../knowledge-files/knowledge-files.module';
@@ -31,7 +31,7 @@ import { AgenticRagService } from './services/agentic-rag.service';
   providers: [
     ChatAgentsService,
     ChatAgentInferencesService,
-    ChatAgentSampleConsumer,
+    ChatAgentConsumer,
     BasicRagService,
     CorrectiveRagService,
     SelfRagService,

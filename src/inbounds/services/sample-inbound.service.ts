@@ -24,8 +24,7 @@ export class SampleInboundService {
     private readonly chatAgentsService: ChatAgentsService,
     private readonly customersService: CustomersService,
     private readonly customerStaffsService: CustomerStaffsService,
-    @InjectQueue('inbounds/sample/v2025.09.05') private sampleQueue: Queue,
-    @InjectQueue('inbounds/sample') private queue: Queue,
+    @InjectQueue('inbounds-for-chat-agents') private queue: Queue,
   ) {}
 
   async sampleSubmit() {
@@ -45,7 +44,7 @@ export class SampleInboundService {
         'Adding job to queue for processing',
         'SampleInboundService',
       );
-      await this.sampleQueue.add('submit', {
+      await this.queue.add('submit', {
         message: 'hello',
         timestamp: new Date().toISOString(),
         service: 'sample-inbound',

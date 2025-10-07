@@ -25,10 +25,7 @@ import { BullModule } from '@nestjs/bullmq';
     CustomersModule,
     CustomerStaffsModule,
     BullModule.registerQueue({
-      name: 'inbounds/sample/v2025.09.05',
-    }),
-    BullModule.registerQueue({
-      name: 'inbounds/sample',
+      name: 'inbounds-for-chat-agents',
     }),
   ],
 })
