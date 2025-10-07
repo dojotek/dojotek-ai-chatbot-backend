@@ -1,20 +1,24 @@
 import { Module } from '@nestjs/common';
 import { SampleInboundService } from './services/sample-inbound.service';
 import { SampleInboundController } from './controllers/sample-inbound.controller';
-import { LogsModule } from 'src/logs/logs.module';
-import { CachesModule } from 'src/caches/caches.module';
-import { ChatSessionsModule } from 'src/chat-sessions/chat-sessions.module';
-import { ChatMessagesModule } from 'src/chat-messages/chat-messages.module';
-import { ConfigsModule } from 'src/configs/configs.module';
-import { ChatAgentsModule } from 'src/chat-agents/chat-agents.module';
-import { CustomersModule } from 'src/customers/customers.module';
-import { CustomerStaffsModule } from 'src/customer-staffs/customer-staffs.module';
+import { LarkInboundController } from './controllers/lark-inbound.controller';
+import { LarkInboundService } from './services/lark-inbound.service';
+import { LogsModule } from '../logs/logs.module';
+import { CachesModule } from '../caches/caches.module';
+import { ChatSessionsModule } from '../chat-sessions/chat-sessions.module';
+import { ChatMessagesModule } from '../chat-messages/chat-messages.module';
+import { ConfigsModule } from '../configs/configs.module';
+import { ChatAgentsModule } from '../chat-agents/chat-agents.module';
+import { CustomersModule } from '../customers/customers.module';
+import { CustomerStaffsModule } from '../customer-staffs/customer-staffs.module';
+import { ChannelsModule } from '../channels/channels.module';
+import { CustomerStaffIdentitiesModule } from '../customer-staff-identities/customer-staff-identities.module';
 import { BullModule } from '@nestjs/bullmq';
 
 @Module({
-  controllers: [SampleInboundController],
-  providers: [SampleInboundService],
-  exports: [SampleInboundService],
+  controllers: [SampleInboundController, LarkInboundController],
+  providers: [SampleInboundService, LarkInboundService],
+  exports: [SampleInboundService, LarkInboundService],
   imports: [
     LogsModule,
     CachesModule,
@@ -24,6 +28,8 @@ import { BullModule } from '@nestjs/bullmq';
     ChatAgentsModule,
     CustomersModule,
     CustomerStaffsModule,
+    ChannelsModule,
+    CustomerStaffIdentitiesModule,
     BullModule.registerQueue({
       name: 'inbounds-for-chat-agents',
     }),

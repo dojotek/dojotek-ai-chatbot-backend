@@ -154,6 +154,20 @@ export class ConfigsService {
     return this.configService.get<number>('CACHE_TTL_CUSTOMER_STAFFS', 3600);
   }
 
+  get cachePrefixCustomerStaffIdentities(): string {
+    return this.configService.get<string>(
+      'CACHE_PREFIX_CUSTOMER_STAFF_IDENTITIES',
+      'customer-staff-identities',
+    );
+  }
+
+  get cacheTtlCustomerStaffIdentities(): number {
+    return this.configService.get<number>(
+      'CACHE_TTL_CUSTOMER_STAFF_IDENTITIES',
+      3600,
+    );
+  }
+
   get cachePrefixChatAgents(): string {
     return this.configService.get<string>(
       'CACHE_PREFIX_CHAT_AGENTS',
@@ -198,6 +212,17 @@ export class ConfigsService {
       'CACHE_TTL_CHAT_AGENT_KNOWLEDGES',
       3600,
     );
+  }
+
+  get cachePrefixChannels(): string {
+    return this.configService.get<string>(
+      'CACHE_PREFIX_CHANNELSCACHE_PREFIX_CHANNELS',
+      'channels',
+    );
+  }
+
+  get cacheTtlChannels(): number {
+    return this.configService.get<number>('CACHE_TTL_CHANNELS', 3600);
   }
 
   // Inbound chat deduplication TTL getters
@@ -292,5 +317,14 @@ export class ConfigsService {
       'INFISICAL_MODEL_PROVIDER_SECRETS_PATH',
       '/MODEL_PROVIDER_SECRETS',
     );
+  }
+
+  // Lark configuration getters
+  get larkVerificationToken(): string {
+    return this.configService.get<string>('LARK_VERIFICATION_TOKEN', '');
+  }
+
+  get larkEncryptKey(): string {
+    return this.configService.get<string>('LARK_ENCRYPT_KEY', '');
   }
 }
