@@ -5,6 +5,7 @@ import { ChatMessagesService } from '../../chat-messages/chat-messages.service';
 import { ChatSessionsService } from '../../chat-sessions/chat-sessions.service';
 import { CustomerStaffIdentitiesService } from '../../customer-staff-identities/customer-staff-identities.service';
 import { LarkOutboundService } from '../services/lark-outbound.service';
+import { SlackOutboundService } from '../services/slack-outbound.service';
 
 export interface SendOutboundMessageJobData {
   chatMessageId: string;
@@ -18,6 +19,7 @@ export class OutboundConsumer extends WorkerHost {
     private readonly chatSessions: ChatSessionsService,
     private readonly customerStaffIdentities: CustomerStaffIdentitiesService,
     private readonly larkOutbound: LarkOutboundService,
+    private readonly slackOutbound: SlackOutboundService,
   ) {
     super();
   }
@@ -64,8 +66,8 @@ export class OutboundConsumer extends WorkerHost {
       return;
     }
 
-    // Only Lark for now; platform stored on chatSession
-    if (chatSession.platform !== 'lark') {
+    // Handle per-platform outbound
+    if (chatSession.platform !== 'lark' && chatSession.platform !== 'slack') {
       this.logs.log(
         `Skipping outbound. Unsupported platform=${chatSession.platform}`,
         'OutboundConsumer',
@@ -86,7 +88,7 @@ export class OutboundConsumer extends WorkerHost {
     const identity = await this.customerStaffIdentities.findMany({
       where: {
         customerStaffId: chatSession.customerStaffId,
-        platform: 'lark',
+        platform: chatSession.platform,
         isActive: true,
       },
       take: 1,
@@ -96,18 +98,69 @@ export class OutboundConsumer extends WorkerHost {
     const customerIdentity = identity[0];
     if (!customerIdentity) {
       this.logs.error(
-        'Customer staff identity not found for Lark',
+        `Customer staff identity not found for platform=${chatSession.platform}`,
         'Outbound send aborted',
         'OutboundConsumer',
       );
       return;
     }
 
-    await this.larkOutbound.send({
-      receiveIdType: 'open_id',
-      receiveId: customerIdentity.platformUserId as unknown as string,
-      msgType: 'text',
-      content: chatMessage.content,
-    });
+    if (chatSession.platform === 'lark') {
+      await this.larkOutbound.send({
+        receiveIdType: 'open_id',
+        receiveId: customerIdentity.platformUserId as unknown as string,
+        msgType: 'text',
+        content: chatMessage.content,
+      });
+      return;
+    }
+
+    if (chatSession.platform === 'slack') {
+      const metadata = (chatMessage as any)?.metadata as  // eslint-disable-line @typescript-eslint/no-unsafe-member-access
+        | Record<string, unknown>
+        | undefined;
+      let channel =
+        typeof metadata?.['channelId'] === 'string'
+          ? metadata['channelId']
+          : undefined;
+
+      // Fallback: if current AI message does not have channelId, try previous message in the session
+      if (!channel) {
+        const previousMessages = await this.chatMessages.findMany({
+          where: { chatSessionId: chatSession.id },
+          orderBy: { createdAt: 'desc' },
+          take: 2,
+        });
+        const previous = previousMessages.find((m) => m.id !== chatMessage.id);
+        const prevMetadata = (previous as any)?.metadata as  // eslint-disable-line @typescript-eslint/no-unsafe-member-access
+          | Record<string, unknown>
+          | undefined;
+        const prevChannel =
+          typeof prevMetadata?.['channelId'] === 'string'
+            ? prevMetadata['channelId']
+            : undefined;
+        if (prevChannel) {
+          channel = prevChannel;
+          this.logs.debug(
+            `Recovered Slack channelId from previous message id=${previous?.id} for session=${chatSession.id}`,
+            'OutboundConsumer',
+          );
+        }
+      }
+
+      if (!channel) {
+        this.logs.error(
+          'Missing Slack channelId in chatMessage.metadata and previous message; cannot send outbound',
+          'Outbound send aborted',
+          'OutboundConsumer',
+        );
+        return;
+      }
+      await this.slackOutbound.send({
+        channel,
+        text: chatMessage.content,
+      });
+      return;
+    }
   }
 }

@@ -10,11 +10,17 @@ import { LogsModule } from '../logs/logs.module';
 import { ChatMessagesModule } from '../chat-messages/chat-messages.module';
 import { ChatSessionsModule } from '../chat-sessions/chat-sessions.module';
 import { CustomerStaffIdentitiesModule } from '../customer-staff-identities/customer-staff-identities.module';
+import { SlackOutboundService } from './services/slack-outbound.service';
 
 @Module({
   controllers: [SampleOutbondController],
-  providers: [SampleOutbondService, LarkOutboundService, OutboundConsumer],
-  exports: [SampleOutbondService, LarkOutboundService],
+  providers: [
+    SampleOutbondService,
+    LarkOutboundService,
+    SlackOutboundService,
+    OutboundConsumer,
+  ],
+  exports: [SampleOutbondService, LarkOutboundService, SlackOutboundService],
   imports: [
     CachesModule,
     ConfigsModule,

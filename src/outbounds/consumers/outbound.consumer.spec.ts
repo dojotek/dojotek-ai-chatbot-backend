@@ -9,6 +9,7 @@ import { ChatMessagesService } from '../../chat-messages/chat-messages.service';
 import { ChatSessionsService } from '../../chat-sessions/chat-sessions.service';
 import { CustomerStaffIdentitiesService } from '../../customer-staff-identities/customer-staff-identities.service';
 import { LarkOutboundService } from '../services/lark-outbound.service';
+import { SlackOutboundService } from '../services/slack-outbound.service';
 import {
   ChatMessage,
   ChatSession,
@@ -22,6 +23,7 @@ describe('OutboundConsumer', () => {
   let chatSessions: ChatSessionsService;
   let identities: CustomerStaffIdentitiesService;
   let lark: LarkOutboundService;
+  let slack: SlackOutboundService;
 
   const mockChatMessage: ChatMessage = {
     id: 'm1',
@@ -72,6 +74,7 @@ describe('OutboundConsumer', () => {
           useValue: { findMany: jest.fn() },
         },
         { provide: LarkOutboundService, useValue: { send: jest.fn() } },
+        { provide: SlackOutboundService, useValue: { send: jest.fn() } },
       ],
     }).compile();
 
@@ -81,11 +84,13 @@ describe('OutboundConsumer', () => {
     chatSessions = module.get(ChatSessionsService);
     identities = module.get(CustomerStaffIdentitiesService);
     lark = module.get(LarkOutboundService);
+    slack = module.get(SlackOutboundService);
 
     jest.spyOn(chatMessages, 'findOne').mockResolvedValue(mockChatMessage);
     jest.spyOn(chatSessions, 'findOne').mockResolvedValue(mockChatSession);
     jest.spyOn(identities, 'findMany').mockResolvedValue([mockIdentity]);
     jest.spyOn(lark, 'send').mockResolvedValue(undefined);
+    jest.spyOn(slack, 'send').mockResolvedValue(undefined);
   });
 
   afterEach(() => jest.clearAllMocks());

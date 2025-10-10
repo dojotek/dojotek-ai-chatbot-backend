@@ -327,4 +327,29 @@ export class ConfigsService {
   get larkEncryptKey(): string {
     return this.configService.get<string>('LARK_ENCRYPT_KEY', '');
   }
+
+  // Slack configuration getters
+  get slackToken(): string {
+    return this.configService.get<string>('SLACK_TOKEN', '');
+  }
+
+  get slackAppId(): string {
+    return this.configService.get<string>('SLACK_APP_ID', '');
+  }
+
+  get slackClientId(): string {
+    return this.configService.get<string>('SLACK_CLIENT_ID', '');
+  }
+
+  get slackClientSecret(): string {
+    return this.configService.get<string>('SLACK_CLIENT_SECRET', '');
+  }
+
+  get slackSigningSecret(): string {
+    return this.configService.get<string>('SLACK_SIGNING_SECRET', '');
+  }
+
+  get slackVerificationToken(): string {
+    return this.configService.get<string>('SLACK_VERIFICATION_TOKEN', '');
+  }
 }

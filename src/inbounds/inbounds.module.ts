@@ -14,11 +14,17 @@ import { CustomerStaffsModule } from '../customer-staffs/customer-staffs.module'
 import { ChannelsModule } from '../channels/channels.module';
 import { CustomerStaffIdentitiesModule } from '../customer-staff-identities/customer-staff-identities.module';
 import { BullModule } from '@nestjs/bullmq';
+import { SlackInboundController } from './controllers/slack-inbound.controller';
+import { SlackInboundService } from './services/slack-inbound.service';
 
 @Module({
-  controllers: [SampleInboundController, LarkInboundController],
-  providers: [SampleInboundService, LarkInboundService],
-  exports: [SampleInboundService, LarkInboundService],
+  controllers: [
+    SampleInboundController,
+    LarkInboundController,
+    SlackInboundController,
+  ],
+  providers: [SampleInboundService, LarkInboundService, SlackInboundService],
+  exports: [SampleInboundService, LarkInboundService, SlackInboundService],
   imports: [
     LogsModule,
     CachesModule,
